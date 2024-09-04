@@ -1,38 +1,115 @@
-.App {
+:root {
+  --blue: #8aaae5;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+.upload-container {
+  height: 100%;
+  width: calc(100% - 500px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 20px;
+  margin-bottom: 40px;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+form {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  align-items: center;
+}
+
+.buttons {
+  display: flex;
+  margin: 20px 0;
+  justify-content: space-between;
+  width: 800px;
+}
+
+label {
+  border: 2px solid var(--blue);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  width: 120px;
+  height: 60px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+label:active {
+  background-color: var(--blue);
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.preview {
+  max-height: 800px;
+  max-width: 100%;
+  border: 2px solid #ccc;
+  padding: 10px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.other-half {
+  height: 100%;
+  width: 500px;
+  background-color: var(--blue);
+}
+
+button {
+  background-color: var(--blue);
+  outline: none;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  cursor: pointer;
+  width: 140px;
+  height: 60px;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+button:active {
+  background-color: blue;
+}
+
+#copyText {
+  background-color: yellow;
+  cursor: pointer;
+  padding: 10px 20px;
+  border: 1px solid #ccc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.error {
+  color: red;
 }
