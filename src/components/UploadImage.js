@@ -9,6 +9,7 @@ function UploadImage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState("");
+  const [fName, setFName] = useState("");
 
   const generateLinkButtonRef = useRef(null);
 
@@ -60,6 +61,8 @@ function UploadImage() {
     const storageRef = ref(storage, `images/${uniqueFileName}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
+    setFName(uniqueFileName);
+
     uploadTask.on(
       "state_changed",
       (snapshot) => {
@@ -73,7 +76,7 @@ function UploadImage() {
       () => {
         getDownloadURL(uploadTask.snapshot.ref)
           .then((downloadURL) => {
-            setUrl(downloadURL); // Log the download URL
+            setUrl(downloadURL);
             setLoading(false);
           })
           .catch((error) => {
@@ -88,7 +91,9 @@ function UploadImage() {
   // Handle copying to clipboard
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(
+        "https://controlpaste.vercel.app/image/" + fName
+      );
       alert("Link Copied");
     } catch (err) {
       console.error("Failed to copy link:", err);
@@ -114,8 +119,8 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen h-full ">
-      <div className="w-3/6 flex flex-col">
+    <div className="flex min-h-screen h-full">
+      <div className="w-1/2 flex flex-col">
         <h1 className="text-5xl font-bold w-4/2 text-center mt-10">
           ControlPaste - Share images easily
         </h1>
@@ -182,7 +187,7 @@ function UploadImage() {
         </form>
       </div>
 
-      <div className="w-3/6 bg-blue-300"></div>
+      <div className="w-1/2 bg-blue-300"></div>
     </div>
   );
 }
