@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import "../App.css";
 
 function ImageDisplay({ imageUrl }) {
   const [imageSrc, setImageSrc] = useState(null);
@@ -8,8 +9,9 @@ function ImageDisplay({ imageUrl }) {
   useEffect(() => {
     const fetchImage = async () => {
       try {
+        let imageUrl = "";
         const response = await axios.get(imageUrl, { responseType: "blob" });
-        const imageUrl = URL.createObjectURL(response.data);
+        imageUrl = URL.createObjectURL(response.data);
         setImageSrc(imageUrl);
       } catch (error) {
         console.error("Error fetching image:", error);

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { storage, database } from "../firebase"; // Import Realtime Database
-import { ref as dbRef, set, get } from "firebase/database"; // Import Realtime Database functions
+import { storage } from "../firebase"; // Import Realtime Database
 import "../App.css";
 
 function UploadImage() {
@@ -10,13 +9,8 @@ function UploadImage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState("");
-  const [tip, setTip] = useState(
-    "Tip: You can paste an image directly from your clipboard."
-  );
-  const [shortenedUrl, setShortenedUrl] = useState("");
-  const [shortening, setShortening] = useState(false);
 
-  const generateLinkButtonRef = useRef(null); // Reference to the generate link button
+  const generateLinkButtonRef = useRef(null);
 
   // Handle file selection from file input
   const handleFileChange = (e) => {
@@ -120,50 +114,75 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="container">
-      <div className="upload-container">
-        <h1>Paste or Upload an Image</h1>
-        <form onSubmit={handleSubmit}>
-          <div className="buttons">
-            <input
-              type="file"
-              id="fileInput"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <label htmlFor="fileInput">Upload Image</label>
+    <div className="flex min-h-screen h-full ">
+      <div className="w-3/6 flex flex-col">
+        <h1 className="text-5xl font-bold w-4/2 text-center mt-10">
+          ControlPaste - Share images easily
+        </h1>
+        <form
+          className="flex flex-col justify-center items-center h-full"
+          onSubmit={handleSubmit}
+        >
+          <div className="flex flex-col">
+            <div className="flex flex-col justify-center items-center">
+              {url && (
+                <span
+                  className="my-5 cursor-pointer"
+                  id="copyText"
+                  onClick={copyToClipboard}
+                >
+                  {"Click here to copy the link"}
+                </span>
+              )}
 
-            {url && (
-              <span id="copyText" onClick={copyToClipboard}>
-                {"Click here to copy the link"}
-              </span>
-            )}
+              {error && <p className="my-5 text-red-500">{error}</p>}
 
-            {error && <p className="error">{error}</p>}
-
-            <button
-              type="button"
-              ref={generateLinkButtonRef}
-              onClick={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? "Generating Link..." : "Generate Link"}
-            </button>
+              <button
+                type="button"
+                ref={generateLinkButtonRef}
+                onClick={handleSubmit}
+                disabled={loading}
+                className="text-white bg-blue-600 rounded-md py-2 px-5 active:bg-blue-800"
+              >
+                {loading ? "Generating Link..." : "Generate Link"}
+              </button>
+            </div>
           </div>
 
           <div className="preview-area">
             {preview ? (
               <img className="preview" src={preview} alt="Preview" />
             ) : (
-              <h1>
-                Copy & Paste <br /> or <br /> Upload an Image
-              </h1>
+              <div>
+                <img
+                  className="preview"
+                  src={"../images/paste.png"}
+                  alt="Preview"
+                />
+              </div>
             )}
+
+            <div className="flex flex-col justify-center items-center">
+              <h1 className="text-2xl mb-4 mt-4">Copy & Paste</h1>
+
+              <input
+                type="file"
+                id="fileInput"
+                style={{ display: "none" }}
+                onChange={handleFileChange}
+              />
+              <label
+                className="cursor-pointer text-white bg-blue-600 rounded-md py-2 px-5 active:bg-blue-800"
+                htmlFor="fileInput"
+              >
+                Or Select an Image
+              </label>
+            </div>
           </div>
         </form>
       </div>
 
-      <div className="other-half"></div>
+      <div className="w-3/6 bg-blue-300"></div>
     </div>
   );
 }
