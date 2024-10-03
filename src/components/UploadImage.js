@@ -119,20 +119,20 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen h-full">
-      <div className="w-1/2 flex flex-col">
-        <h1 className="text-5xl font-bold w-4/2 text-center mt-10">
+    <div className="flex min-h-screen h-auto flex-col md:flex-row">
+      <div className="w-full md:w-1/2 flex flex-col px-4 md:px-0">
+        <h1 className="text-2xl md:text-4xl mb-6 font-bold text-center mt-10">
           ControlPaste - Share images easily
         </h1>
         <form
           className="flex flex-col justify-center items-center h-full"
           onSubmit={handleSubmit}
         >
-          <div className="flex flex-col">
+          <div className="flex flex-col w-full">
             <div className="flex flex-col justify-center items-center">
               {url && (
                 <span
-                  className="my-5 cursor-pointer"
+                  className="my-5 cursor-pointer text-blue-500"
                   id="copyText"
                   onClick={copyToClipboard}
                 >
@@ -147,20 +147,24 @@ function UploadImage() {
                 ref={generateLinkButtonRef}
                 onClick={handleSubmit}
                 disabled={loading}
-                className="text-white bg-blue-600 rounded-md py-2 px-5 active:bg-blue-800"
+                className="text-white bg-blue-600 rounded-md py-2 px-5 mb-6 active:bg-blue-800"
               >
                 {loading ? "Generating Link..." : "Generate Link"}
               </button>
             </div>
           </div>
 
-          <div className="preview-area">
+          <div className="preview-area w-full flex flex-col justify-center items-center">
             {preview ? (
-              <img className="preview" src={preview} alt="Preview" />
+              <img
+                className="preview max-w-full h-auto mb-4"
+                src={preview}
+                alt="Preview"
+              />
             ) : (
               <div>
                 <img
-                  className="preview"
+                  className="preview max-w-full h-auto mb-4"
                   src={"../images/paste.png"}
                   alt="Preview"
                 />
@@ -168,7 +172,7 @@ function UploadImage() {
             )}
 
             <div className="flex flex-col justify-center items-center">
-              <h1 className="text-2xl mb-4 mt-4">Copy & Paste</h1>
+              <h1 className="text-xl md:text-2xl mb-4 mt-4">Copy & Paste</h1>
 
               <input
                 type="file"
@@ -177,7 +181,7 @@ function UploadImage() {
                 onChange={handleFileChange}
               />
               <label
-                className="cursor-pointer text-white bg-blue-600 rounded-md py-2 px-5 active:bg-blue-800"
+                className="cursor-pointer text-white bg-blue-600 rounded-md py-2 px-5 active:bg-blue-800 mb-6"
                 htmlFor="fileInput"
               >
                 Or Select an Image
@@ -187,7 +191,7 @@ function UploadImage() {
         </form>
       </div>
 
-      <div className="w-1/2 bg-blue-300"></div>
+      <div className="w-full md:w-1/2 bg-blue-300 h-64 md:h-auto"></div>
     </div>
   );
 }
