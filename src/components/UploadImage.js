@@ -92,7 +92,8 @@ function UploadImage() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(
-        "https://controlpaste.vercel.app/image/" + fName
+        "https://controlpaste.artalic.com/image/" + fName
+        // "https://controlpaste.vercel.app/image/" + fName
       );
       alert("Link Copied");
     } catch (err) {
@@ -119,60 +120,61 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen h-auto flex-col md:flex-row">
-      <div className="w-full md:w-1/2 flex flex-col px-4 md:px-0">
-        <h1 className="text-2xl md:text-4xl mb-6 font-bold text-center mt-10">
-          ControlPaste - Share images easily
+    <div className="flex flex-col min-h-screen h-auto md:flex-row">
+      {/* Left section with form */}
+      <div className="w-full md:w-1/2 flex flex-col px-6 py-8 md:px-0 md:py-0">
+        <h1 className="text-3xl md:text-4xl font-bold text-center mb-6">
+          ControlPaste - Share Images Easily
         </h1>
+
         <form
-          className="flex flex-col justify-center items-center h-full"
+          className="flex flex-col items-center w-full"
           onSubmit={handleSubmit}
         >
-          <div className="flex flex-col w-full">
-            <div className="flex flex-col justify-center items-center">
-              {url && (
-                <span
-                  className="my-5 cursor-pointer text-blue-500"
-                  id="copyText"
-                  onClick={copyToClipboard}
-                >
-                  {"Click here to copy the link"}
-                </span>
-              )}
-
-              {error && <p className="my-5 text-red-500">{error}</p>}
-
-              <button
-                type="button"
-                ref={generateLinkButtonRef}
-                onClick={handleSubmit}
-                disabled={loading}
-                className="text-white bg-blue-600 rounded-md py-2 px-5 mb-6 active:bg-blue-800"
+          {/* URL and Error Display */}
+          <div className="flex flex-col justify-center items-center w-full mb-6">
+            {url && (
+              <span
+                className="my-4 cursor-pointer text-blue-600 text-lg"
+                id="copyText"
+                onClick={copyToClipboard}
               >
-                {loading ? "Generating Link..." : "Generate Link"}
-              </button>
-            </div>
+                Click here to copy the link
+              </span>
+            )}
+            {error && <p className="text-red-500 my-4 text-lg">{error}</p>}
+
+            {/* Generate Link Button */}
+            <button
+              type="button"
+              ref={generateLinkButtonRef}
+              onClick={handleSubmit}
+              disabled={loading}
+              className="text-white bg-blue-600 rounded-md py-3 px-6 mb-6 active:bg-blue-800 w-full md:w-auto text-lg"
+            >
+              {loading ? "Generating Link..." : "Generate Link"}
+            </button>
           </div>
 
-          <div className="preview-area w-full flex flex-col justify-center items-center">
+          {/* Image Preview Section */}
+          <div className="preview-area flex flex-col justify-center items-center w-full mb-6">
             {preview ? (
               <img
-                className="preview max-w-full h-auto mb-4"
+                className="max-w-full h-auto mb-4 rounded-lg"
                 src={preview}
                 alt="Preview"
               />
             ) : (
-              <div>
-                <img
-                  className="preview max-w-full h-auto mb-4"
-                  src={"../images/paste.png"}
-                  alt="Preview"
-                />
-              </div>
+              <img
+                className="max-w-full h-auto mb-4 rounded-lg"
+                src={"../images/paste.png"}
+                alt="Preview"
+              />
             )}
 
-            <div className="flex flex-col justify-center items-center">
-              <h1 className="text-xl md:text-2xl mb-4 mt-4">Copy & Paste</h1>
+            {/* File Input */}
+            <div className="flex flex-col justify-center items-center w-full">
+              <h1 className="text-xl md:text-2xl mb-4">Copy & Paste</h1>
 
               <input
                 type="file"
@@ -181,7 +183,7 @@ function UploadImage() {
                 onChange={handleFileChange}
               />
               <label
-                className="cursor-pointer text-white bg-blue-600 rounded-md py-2 px-5 active:bg-blue-800 mb-6"
+                className="cursor-pointer text-white bg-blue-600 rounded-md py-3 px-6 active:bg-blue-800 mb-6 text-lg"
                 htmlFor="fileInput"
               >
                 Or Select an Image
@@ -191,7 +193,10 @@ function UploadImage() {
         </form>
       </div>
 
-      <div className="w-full md:w-1/2 bg-blue-300 h-64 md:h-auto"></div>
+      {/* Right section with background */}
+      <div className="w-full md:w-1/2 bg-blue-300 h-64 md:h-auto flex justify-center items-center">
+        {/* Additional content could go here if necessary */}
+      </div>
     </div>
   );
 }
