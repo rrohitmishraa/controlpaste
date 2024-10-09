@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
-import { storage } from "../firebase"; // Make sure this is your Firebase storage reference
+import { storage } from "../firebase";
 import "../App.css";
 import { Link, useParams } from "react-router-dom";
 

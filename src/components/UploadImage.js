@@ -92,7 +92,7 @@ function UploadImage() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(
-        "https://controlpaste.artalic.com/image/" + fName
+        "https://paste.artalic.com/image/" + fName
         // "https://controlpaste.vercel.app/image/" + fName
       );
       alert("Link Copied");
