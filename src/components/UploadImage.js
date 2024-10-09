@@ -120,83 +120,77 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen h-auto md:flex-row">
-      {/* Left section with form */}
-      <div className="w-full md:w-1/2 flex flex-col px-6 py-8 md:px-0 md:py-0">
-        <h1 className="text-3xl md:text-4xl font-bold text-center mb-6">
-          ControlPaste - Share Images Easily
-        </h1>
+    <div className="w-screen h-screen flex flex-col p-[20px] justify-start items-center">
+      <h1 className="text-center text-[56px] md:text-[90px] mb-[-40px] font-bold">
+        PASTE
+      </h1>
+      <span className="bg-black text-white text-[14px] md:text-[24px] m-[20px] py-[2px] px-[10px]">
+        SHARE IMAGES EASILY
+      </span>
 
-        <form
-          className="flex flex-col items-center w-full"
-          onSubmit={handleSubmit}
-        >
-          {/* URL and Error Display */}
-          <div className="flex flex-col justify-center items-center w-full mb-6">
-            {url && (
-              <span
-                className="my-4 cursor-pointer text-blue-600 text-lg"
-                id="copyText"
-                onClick={copyToClipboard}
-              >
-                Click here to copy the link
-              </span>
-            )}
-            {error && <p className="text-red-500 my-4 text-lg">{error}</p>}
+      <form className="" onSubmit={handleSubmit}>
+        {/* URL and Error Display */}
+        <div className="flex flex-col justify-center items-center w-full mb-6">
+          {url && (
+            <span className="" id="copyText" onClick={copyToClipboard}>
+              Click here to copy the link
+            </span>
+          )}
+          {error && (
+            <p className="text-red-600 bg-[rgba(255,127,127,0.2)] px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]">
+              {error}
+            </p>
+          )}
 
-            {/* Generate Link Button */}
-            <button
-              type="button"
-              ref={generateLinkButtonRef}
-              onClick={handleSubmit}
-              disabled={loading}
-              className="text-white bg-blue-600 rounded-md py-3 px-6 mb-6 active:bg-blue-800 w-full md:w-auto text-lg"
+          {/* Generate Link Button */}
+          <button
+            type="button"
+            ref={generateLinkButtonRef}
+            onClick={handleSubmit}
+            disabled={loading}
+            className="text-white bg-green-600 rounded-md py-3 px-6 mb-6 active:bg-blue-800 text-lg fixed bottom-0 w-[240px] ma-[20px]"
+          >
+            {loading ? "Generating Link..." : "Generate Link"}
+          </button>
+        </div>
+
+        {/* Image Preview Section */}
+        <div className="preview-area flex flex-col justify-center items-center w-full mb-6">
+          {preview ? (
+            <img
+              className="max-w-full h-auto mb-4 rounded-lg"
+              src={preview}
+              alt="Preview"
+            />
+          ) : (
+            <img
+              className="max-w-full h-auto mb-4 rounded-lg"
+              src={"../images/paste.png"}
+              alt="Preview"
+            />
+          )}
+
+          {/* File Input */}
+          <div className="flex flex-col justify-center items-center w-full">
+            <h1 className="text-[14px] md:text-[20px] mb-[20px] md:mb-[36px]">
+              Copy & Paste
+            </h1>
+
+            <input
+              type="file"
+              id="fileInput"
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            <label
+              className="cursor-pointer text-white bg-blue-600 rounded-md py-3 px-6 w-[240px] text-center active:bg-blue-800 text-[16px]"
+              htmlFor="fileInput"
             >
-              {loading ? "Generating Link..." : "Generate Link"}
-            </button>
+              Or Select an Image
+            </label>
           </div>
-
-          {/* Image Preview Section */}
-          <div className="preview-area flex flex-col justify-center items-center w-full mb-6">
-            {preview ? (
-              <img
-                className="max-w-full h-auto mb-4 rounded-lg"
-                src={preview}
-                alt="Preview"
-              />
-            ) : (
-              <img
-                className="max-w-full h-auto mb-4 rounded-lg"
-                src={"../images/paste.png"}
-                alt="Preview"
-              />
-            )}
-
-            {/* File Input */}
-            <div className="flex flex-col justify-center items-center w-full">
-              <h1 className="text-xl md:text-2xl mb-4">Copy & Paste</h1>
-
-              <input
-                type="file"
-                id="fileInput"
-                style={{ display: "none" }}
-                onChange={handleFileChange}
-              />
-              <label
-                className="cursor-pointer text-white bg-blue-600 rounded-md py-3 px-6 active:bg-blue-800 mb-6 text-lg"
-                htmlFor="fileInput"
-              >
-                Or Select an Image
-              </label>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Right section with background */}
-      <div className="w-full md:w-1/2 bg-blue-300 h-64 md:h-auto flex justify-center items-center">
-        {/* Additional content could go here if necessary */}
-      </div>
+        </div>
+      </form>
     </div>
   );
 }
