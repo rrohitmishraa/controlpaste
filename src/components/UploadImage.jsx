@@ -132,7 +132,7 @@ function UploadImage() {
         <div className="flex flex-col justify-center items-center w-full fixed bottom-0 left-0">
           {url && (
             <span
-              className="text-green-600 bg-[rgba(255,127,127,0.2)] px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]"
+              className="bg-green-600 text-white px-[20px] py-[2px] text-[14px] cursor-pointer md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]"
               id="copyText"
               onClick={copyToClipboard}
             >
@@ -140,7 +140,7 @@ function UploadImage() {
             </span>
           )}
           {error && (
-            <p className="text-red-600 bg-[rgba(255,127,127,0.2)] px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]">
+            <p className="bg-red-600 text-white px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]">
               {error}
             </p>
           )}
@@ -161,7 +161,7 @@ function UploadImage() {
         <div className="flex flex-col justify-center items-center p-[20px] w-screen mb-8">
           {preview ? (
             <img
-              className="h-screen mb-4 rounded-lg"
+              className="h-full mb-4 rounded-lg"
               src={preview}
               alt="Preview"
             />
@@ -185,7 +185,7 @@ function UploadImage() {
             onChange={handleFileChange}
           />
           <label
-            className="cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-md hover:bg-gray-300 mb-[60px] py-3 px-6 w-[240px] text-center text-[16px]"
+            className="cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-md hover:bg-gray-300 mb-[100px] py-3 px-6 w-[240px] text-center text-[16px]"
             htmlFor="fileInput"
           >
             Or Select an Image
