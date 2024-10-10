@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
-import UploadImage from "./components/UploadImage";
-import LoadImage from "./components/LoadImage";
+import UploadImage from "./pages/UploadImage";
+import LoadImage from "./pages/ShowImage";
 
 function App() {
   return (

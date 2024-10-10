@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { storage } from "../firebase"; // Import Realtime Database
 import "../App.css";
+import Header from "../components/Header";
 
 function UploadImage() {
   const [file, setFile] = useState(null);
@@ -120,12 +121,7 @@ function UploadImage() {
 
   return (
     <div className="flex flex-col justify-start items-center">
-      <h1 className="text-center text-[56px] md:text-[90px] mb-[-40px] font-bold">
-        PASTE
-      </h1>
-      <span className="bg-black text-white text-[14px] md:text-[24px] m-[20px] py-[2px] px-[10px]">
-        SHARE IMAGES EASILY
-      </span>
+      <Header />
 
       <form className="w-screen" onSubmit={handleSubmit}>
         {/* URL and Error Display */}

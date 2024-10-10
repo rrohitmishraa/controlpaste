@@ -3,6 +3,7 @@ import { getDownloadURL, ref } from "firebase/storage";
 import { storage } from "../firebase";
 import "../App.css";
 import { Link, useParams } from "react-router-dom";
+import Header from "../components/Header";
 
 function LoadImage() {
   const [imageUrl, setImageUrl] = useState("");
@@ -28,25 +29,11 @@ function LoadImage() {
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen md:flex-row">
-      {/* Sidebar Section */}
-      <div className="w-full md:w-3/12 bg-blue-300 p-6 md:p-10 flex flex-col items-center md:items-start justify-center">
-        <h1 className="text-2xl md:text-4xl font-bold my-4 md:my-10 text-center md:text-left">
-          ControlPaste - Share images easily
-        </h1>
-        <p className="mb-4 md:mb-6 text-center md:text-left">
-          Want to share an image?
-        </p>
-        <Link
-          className="bg-white px-4 py-2 rounded-md hover:bg-gray-200 transition-colors text-center"
-          to="/"
-        >
-          Click Here...
-        </Link>
-      </div>
+    <div className="flex flex-col justify-start items-center h-full">
+      <Header />
 
       {/* Image Display Section */}
-      <div className="w-full md:w-9/12 flex justify-center items-center p-6 md:p-10 bg-gray-50">
+      <div className="w-full flex justify-center items-center p-6 md:p-10 pb-[80px] md:pb-[120px]">
         {loading ? (
           <p className="text-lg md:text-xl">Loading image...</p>
         ) : error ? (
@@ -58,6 +45,16 @@ function LoadImage() {
             className="max-w-full h-auto shadow-lg rounded-lg"
           />
         )}
+      </div>
+
+      {/* Extra Section */}
+      <div className="w-full bg-blue-600 py-[10px] md:py-[22px] flex flex-col fixed bottom-0 items-center justify-center">
+        <Link
+          className="bg-white px-4 py-2 rounded-md hover:bg-gray-200 transition-colors text-center"
+          to="/"
+        >
+          Click here and share your own image
+        </Link>
       </div>
     </div>
   );
