@@ -57,7 +57,7 @@ function UploadImage() {
 
     setLoading(true);
     // Use milliseconds as the unique file name
-    const uniqueFileName = `${Date.now()}_${file.name}`;
+    const uniqueFileName = `${Date.now()}`;
     const storageRef = ref(storage, `images/${uniqueFileName}`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
@@ -78,6 +78,7 @@ function UploadImage() {
           .then((downloadURL) => {
             setUrl(downloadURL);
             setLoading(false);
+            // copyToClipboard();
           })
           .catch((error) => {
             console.error("Error getting download URL:", error); // Log the error during URL retrieval
@@ -91,11 +92,9 @@ function UploadImage() {
   // Handle copying to clipboard
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(
-        "https://paste.artalic.com/image/" + fName
-        // "https://controlpaste.vercel.app/image/" + fName
-      );
-      alert("Link Copied");
+      await navigator.clipboard
+        .writeText("https://paste.artalic.com/image/" + fName)
+        .then(alert("Link Copied"));
     } catch (err) {
       console.error("Failed to copy link:", err);
     }
@@ -105,9 +104,9 @@ function UploadImage() {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Enter") {
-        event.preventDefault(); // Prevent default form submission behavior
+        event.preventDefault();
         if (generateLinkButtonRef.current) {
-          generateLinkButtonRef.current.click(); // Trigger the button click
+          generateLinkButtonRef.current.click();
         }
       }
     };
@@ -120,7 +119,7 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="w-screen h-screen flex flex-col p-[20px] justify-start items-center">
+    <div className="flex flex-col justify-start items-center">
       <h1 className="text-center text-[56px] md:text-[90px] mb-[-40px] font-bold">
         PASTE
       </h1>
@@ -128,11 +127,15 @@ function UploadImage() {
         SHARE IMAGES EASILY
       </span>
 
-      <form className="" onSubmit={handleSubmit}>
+      <form className="w-screen" onSubmit={handleSubmit}>
         {/* URL and Error Display */}
-        <div className="flex flex-col justify-center items-center w-full mb-6">
+        <div className="flex flex-col justify-center items-center w-full fixed bottom-0 left-0">
           {url && (
-            <span className="" id="copyText" onClick={copyToClipboard}>
+            <span
+              className="text-green-600 bg-[rgba(255,127,127,0.2)] px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]"
+              id="copyText"
+              onClick={copyToClipboard}
+            >
               Click here to copy the link
             </span>
           )}
@@ -148,47 +151,45 @@ function UploadImage() {
             ref={generateLinkButtonRef}
             onClick={handleSubmit}
             disabled={loading}
-            className="text-white bg-green-600 rounded-md py-3 px-6 mb-6 active:bg-blue-800 text-lg fixed bottom-0 w-[240px] ma-[20px]"
+            className="text-blue-100 bg-blue-600 rounded-md py-3 px-6 mb-[20px] active:bg-blue-800 text-lg w-[240px]"
           >
             {loading ? "Generating Link..." : "Generate Link"}
           </button>
         </div>
 
         {/* Image Preview Section */}
-        <div className="preview-area flex flex-col justify-center items-center w-full mb-6">
+        <div className="flex flex-col justify-center items-center p-[20px] w-screen mb-8">
           {preview ? (
             <img
-              className="max-w-full h-auto mb-4 rounded-lg"
+              className="h-screen mb-4 rounded-lg"
               src={preview}
               alt="Preview"
             />
           ) : (
             <img
-              className="max-w-full h-auto mb-4 rounded-lg"
+              className="h-auto mb-4 rounded-lg"
               src={"../images/paste.png"}
               alt="Preview"
             />
           )}
 
           {/* File Input */}
-          <div className="flex flex-col justify-center items-center w-full">
-            <h1 className="text-[14px] md:text-[20px] mb-[20px] md:mb-[36px]">
-              Copy & Paste
-            </h1>
+          <h1 className="text-[14px] text-center md:text-[20px] mb-[20px] md:mb-[36px]">
+            Copy & Paste
+          </h1>
 
-            <input
-              type="file"
-              id="fileInput"
-              style={{ display: "none" }}
-              onChange={handleFileChange}
-            />
-            <label
-              className="cursor-pointer text-white bg-blue-600 rounded-md py-3 px-6 w-[240px] text-center active:bg-blue-800 text-[16px]"
-              htmlFor="fileInput"
-            >
-              Or Select an Image
-            </label>
-          </div>
+          <input
+            type="file"
+            id="fileInput"
+            style={{ display: "none" }}
+            onChange={handleFileChange}
+          />
+          <label
+            className="cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-md hover:bg-gray-300 mb-[60px] py-3 px-6 w-[240px] text-center text-[16px]"
+            htmlFor="fileInput"
+          >
+            Or Select an Image
+          </label>
         </div>
       </form>
     </div>
