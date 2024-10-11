@@ -60,6 +60,7 @@ function UploadImage() {
     // Use milliseconds as the unique file name
     const uniqueFileName = `${Date.now()}`;
     const storageRef = ref(storage, `images/${uniqueFileName}`);
+    // const storageRef = ref(storage, `images/kajukatli`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     setFName(uniqueFileName);
@@ -70,7 +71,7 @@ function UploadImage() {
         // Optional: Track progress
       },
       (error) => {
-        console.error("Upload error:", error); // Log the error during upload
+        console.error("Upload error:", error);
         setError("Failed to upload image");
         setLoading(false);
       },

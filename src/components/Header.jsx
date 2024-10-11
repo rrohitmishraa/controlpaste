@@ -6,12 +6,12 @@ export default function Header() {
       to="/"
       className="w-[180px] md:w-[280px] flex flex-col justify-center items-center"
     >
-      <h1 className="text-center text-[56px] md:text-[90px] mb-[-22px] md:mb-[-30px] font-bold w-full">
+      <h1 className="text-center text-[56px] md:text-[60px] mb-[-20px] md:mb-[-18px] font-bold w-full">
         PASTE
       </h1>
-      <span className="bg-black text-white text-[14px] md:text-[22px] text-center w-[170px] md:w-[270px]">
+      <span className="bg-black text-white text-[12px] md:text-[12px] text-center w-[170px] md:w-[180px]">
         SHARE IMAGES EASILY
-        <span className="text-[8px] ml-[4px] md:text-[12px]">v2.3</span>
+        <span className="text-[8px] ml-[4px] md:text-[12px]">v2.4</span>
       </span>
     </Link>
   );

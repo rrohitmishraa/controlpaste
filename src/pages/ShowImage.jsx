@@ -33,7 +33,7 @@ function LoadImage() {
       <Header />
 
       {/* Image Display Section */}
-      <div className="w-full flex justify-center items-center p-6 md:p-10 pb-[80px] md:pb-[120px]">
+      <div className="w-full flex justify-center items-center p-[8px] md:p-[10px] h-auto pb-[80px] md:pb-[120px]">
         {loading ? (
           <p className="text-lg md:text-xl">Loading image...</p>
         ) : error ? (
@@ -42,7 +42,7 @@ function LoadImage() {
           <img
             src={imageUrl}
             alt="Loaded from Firebase"
-            className="max-w-full h-auto shadow-lg rounded-lg"
+            className="md:max-w-[1080px] max-w-full max-h-screen md:max-h-[800px] shadow-lg rounded-lg"
           />
         )}
       </div>
