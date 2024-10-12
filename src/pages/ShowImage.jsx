@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { getDownloadURL, ref } from "firebase/storage";
 import { storage } from "../firebase";
 import "../App.css";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Header from "../components/Header";
 
 function LoadImage() {
@@ -29,11 +29,11 @@ function LoadImage() {
   }, []);
 
   return (
-    <div className="flex flex-col justify-start items-center h-full">
+    <div className="flex md:flex-col flex-col-reverse justify-start items-center h-full">
       <Header />
 
       {/* Image Display Section */}
-      <div className="w-full flex justify-center items-center p-[8px] md:p-[10px] h-auto pb-[80px] md:pb-[120px]">
+      <div className="w-full p-[5px] flex justify-center items-center md:h-[calc(100vh-80px)] h-[calc(80vh+15px)]">
         {loading ? (
           <p className="text-lg md:text-xl">Loading image...</p>
         ) : error ? (
@@ -42,19 +42,9 @@ function LoadImage() {
           <img
             src={imageUrl}
             alt="Loaded from Firebase"
-            className="md:max-w-[1080px] max-w-full max-h-screen md:max-h-[800px] shadow-lg rounded-lg"
+            className="max-w-full max-h-full shadow-lg rounded-lg"
           />
         )}
-      </div>
-
-      {/* Extra Section */}
-      <div className="w-full bg-blue-600 py-[10px] md:py-[22px] flex flex-col fixed bottom-0 items-center justify-center">
-        <Link
-          className="bg-white px-4 py-2 rounded-md hover:bg-gray-200 transition-colors text-center"
-          to="/"
-        >
-          Click here and share your own image
-        </Link>
       </div>
     </div>
   );

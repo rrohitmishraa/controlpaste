@@ -8,7 +8,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<UploadImage />} />
-        <Route path="/image/:id" element={<LoadImage />} />
+        <Route path="/:id" element={<LoadImage />} />
         <Route path="/home" element={<UploadImage />} />
       </Routes>
     </Router>

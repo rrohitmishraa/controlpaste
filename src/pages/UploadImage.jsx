@@ -60,7 +60,7 @@ function UploadImage() {
     // Use milliseconds as the unique file name
     const uniqueFileName = `${Date.now()}`;
     const storageRef = ref(storage, `images/${uniqueFileName}`);
-    // const storageRef = ref(storage, `images/kajukatli`);
+    // const storageRef = ref(storage, `images/blow`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     setFName(uniqueFileName);
@@ -95,7 +95,7 @@ function UploadImage() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard
-        .writeText("https://paste.artalic.com/image/" + fName)
+        .writeText("https://paste.artalic.com/" + fName)
         .then(alert("Link Copied"));
     } catch (err) {
       console.error("Failed to copy link:", err);
@@ -121,57 +121,27 @@ function UploadImage() {
   }, []);
 
   return (
-    <div className="flex flex-col justify-start items-center">
-      <Header />
+    <div className="flex flex-col h-full justify-center items-center">
+      <Header page="home" />
 
-      <form className="w-screen" onSubmit={handleSubmit}>
-        {/* URL and Error Display */}
-        <div className="flex flex-col justify-center items-center w-full fixed bottom-0 left-0">
-          {url && (
-            <span
-              className="bg-green-600 text-white px-[20px] py-[2px] text-[14px] cursor-pointer md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]"
-              id="copyText"
-              onClick={copyToClipboard}
-            >
-              Click here to copy the link
-            </span>
-          )}
-          {error && (
-            <p className="bg-red-600 text-white px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]">
-              {error}
-            </p>
-          )}
-
-          {/* Generate Link Button */}
-          <button
-            type="button"
-            ref={generateLinkButtonRef}
-            onClick={handleSubmit}
-            disabled={loading}
-            className="text-blue-100 bg-blue-600 rounded-md py-3 px-6 mb-[20px] active:bg-blue-800 text-lg w-[240px]"
-          >
-            {loading ? "Generating Link..." : "Generate Link"}
-          </button>
-        </div>
-
+      <form
+        className="flex flex-col h-[calc(100vh-330px)] md:h-[calc(100vh-255px)] items-center p-[5px] w-screen"
+        onSubmit={handleSubmit}
+      >
         {/* Image Preview Section */}
-        <div className="flex flex-col justify-center items-center p-[20px] w-screen mb-8">
-          {preview ? (
-            <img
-              className="h-full mb-4 rounded-lg"
-              src={preview}
-              alt="Preview"
-            />
-          ) : (
-            <img
-              className="h-auto mb-4 rounded-lg"
-              src={"../images/paste.png"}
-              alt="Preview"
-            />
-          )}
+        {preview ? (
+          <img className="h-full mb-4 rounded-lg" src={preview} alt="Preview" />
+        ) : (
+          <img
+            className="h-auto mb-4 rounded-lg"
+            src={"../images/paste.png"}
+            alt="Preview"
+          />
+        )}
 
+        <div className="flex items-center justify-center">
           {/* File Input */}
-          <h1 className="text-[14px] text-center md:text-[20px] mb-[20px] md:mb-[36px]">
+          <h1 className="hidden md:block text-[14px] text-center md:text-[20px]">
             Copy & Paste
           </h1>
 
@@ -181,14 +151,52 @@ function UploadImage() {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
+
           <label
-            className="cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-md hover:bg-gray-300 mb-[100px] py-3 px-6 w-[240px] text-center text-[16px]"
+            className="hidden md:block cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-[8px] md:hover:bg-gray-300 active:bg-gray-300 py-3 w-[180px] ml-[20px] text-center text-[16px]"
             htmlFor="fileInput"
           >
             Or Select an Image
           </label>
+
+          <label
+            className="md:hidden cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-[8px] md:hover:bg-gray-300 active:bg-gray-300 py-3 w-[180px] ml-[20px] text-center text-[16px]"
+            htmlFor="fileInput"
+          >
+            Tap to select an Image
+          </label>
         </div>
       </form>
+
+      {/* URL and Error Display */}
+      <div className="flex flex-col justify-cente items-center w-full fixed bottom-0 left-0">
+        {url && (
+          <span
+            className="bg-green-600 text-center text-white mb-[5px] py-[8px] px-[20px] text-[14px] cursor-pointer md:text-[16px] rounded-[10px]"
+            id="copyText"
+            onClick={copyToClipboard}
+          >
+            {/* {`https://paste.artalic.com/${fName}`} <br />  */}
+            Click here to copy the link
+          </span>
+        )}
+        {error && (
+          <p className="bg-red-600 text-white px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]">
+            {error}
+          </p>
+        )}
+
+        {/* Generate Link Button */}
+        <button
+          type="button"
+          ref={generateLinkButtonRef}
+          onClick={handleSubmit}
+          disabled={loading}
+          className="text-blue-100 bg-blue-600 rounded-md py-3 mb-[5px] md:mb-[10px] active:bg-blue-800 md:hover:bg-blue-800 text-lg w-[240px]"
+        >
+          {loading ? "Generating Link..." : "Generate Link"}
+        </button>
+      </div>
     </div>
   );
 }
