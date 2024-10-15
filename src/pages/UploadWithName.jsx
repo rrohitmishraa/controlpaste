@@ -4,13 +4,14 @@ import { storage } from "../firebase"; // Import Realtime Database
 import "../App.css";
 import Header from "../components/Header";
 
-function UploadImage() {
+function UuploadWithName() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [url, setUrl] = useState("");
   const [fName, setFName] = useState("");
+  const [uniqueFileName, setUniqueFileName] = useState("");
 
   const generateLinkButtonRef = useRef(null);
 
@@ -58,9 +59,7 @@ function UploadImage() {
 
     setLoading(true);
     // Use milliseconds as the unique file name
-    const uniqueFileName = `${Date.now()}`;
     const storageRef = ref(storage, `images/${uniqueFileName}`);
-    // const storageRef = ref(storage, `images/kajukatli`);
     const uploadTask = uploadBytesResumable(storageRef, file);
 
     setFName(uniqueFileName);
@@ -168,6 +167,14 @@ function UploadImage() {
         </div>
       </form>
 
+      <input
+        className="bg-white"
+        type="text"
+        value={uniqueFileName}
+        onChange={(e) => setUniqueFileName(e.target.value)}
+        placeholder="Name"
+      />
+
       {/* URL and Error Display */}
       <div className="flex flex-col justify-cente items-center w-full fixed bottom-0 left-0">
         {url && (
@@ -201,4 +208,4 @@ function UploadImage() {
   );
 }
 
-export default UploadImage;
+export default UuploadWithName;
