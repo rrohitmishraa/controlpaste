@@ -95,7 +95,7 @@ function UploadImage() {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard
-        .writeText("https://paste.artalic.com/" + fName)
+        .writeText("https://paste.unlinkly.com/" + fName)
         .then(alert("Link Copied"));
     } catch (err) {
       console.error("Failed to copy link:", err);
