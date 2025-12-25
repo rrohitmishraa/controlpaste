@@ -6,8 +6,8 @@ export default function Header(props) {
     <div className="flex bg-blue-600 px-[8px] md:px-[18px] text-white w-screen h-[60px] md:h-[80px] flex-row justify-center items-center">
       <Link to="/" className="flex justify-start items-center">
         <h1 className="text-center text-[18px] md:text-[40px] font-bold">
-          PASTE. ARTALIC
-          <span className="text-[8px] ml-[4px] md:text-[12px]">v2.5</span>
+          PASTE.UNLINKLY
+          <span className="text-[8px] ml-[4px] md:text-[12px]">v3.0</span>
         </h1>
       </Link>
 
