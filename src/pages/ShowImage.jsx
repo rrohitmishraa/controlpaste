@@ -1,53 +1,69 @@
-import React, { useState, useEffect } from "react";
-import { getDownloadURL, ref } from "firebase/storage";
+import { useEffect, useState } from "react";
+import { ref, getDownloadURL } from "firebase/storage";
 import { storage } from "../firebase";
-import "../App.css";
 import { useParams } from "react-router-dom";
 import Header from "../components/Header";
 
-function LoadImage() {
-  const [imageUrl, setImageUrl] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const param = useParams();
+export default function LoadImage() {
+  const { id } = useParams();
 
+  const [imageUrl, setImageUrl] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  /* ===============================
+     LOAD IMAGE
+  ================================ */
   useEffect(() => {
     const fetchImage = async () => {
       try {
-        const imageRef = ref(storage, "images/" + param.id);
-        const url = await getDownloadURL(imageRef);
+        const url = await getDownloadURL(ref(storage, `images/${id}`));
         setImageUrl(url);
-        setLoading(false);
       } catch (err) {
+        console.error(err);
         setError("Failed to load image");
+      } finally {
         setLoading(false);
-        console.error("Error fetching image:", err);
       }
     };
 
     fetchImage();
-  }, []);
+  }, [id]);
 
   return (
-    <div className="flex md:flex-col flex-col-reverse justify-start items-center h-full">
+    <div className="min-h-screen bg-black flex flex-col">
       <Header />
 
-      {/* Image Display Section */}
-      <div className="w-full p-[5px] flex justify-center items-center md:h-[calc(100vh-80px)] h-[calc(80vh+15px)]">
-        {loading ? (
-          <p className="text-lg md:text-xl">Loading image...</p>
-        ) : error ? (
-          <p className="text-red-500 text-lg md:text-xl">{error}</p>
-        ) : (
+      {/* IMAGE VIEWPORT */}
+      <div
+        className="
+          flex-1
+          flex
+          items-center
+          justify-center
+          px-2 sm:px-4
+        "
+      >
+        {loading && (
+          <p className="text-sm sm:text-base text-gray-400">Loading image…</p>
+        )}
+
+        {error && <p className="text-sm sm:text-base text-red-500">{error}</p>}
+
+        {!loading && !error && (
           <img
             src={imageUrl}
-            alt="Loaded from Firebase"
-            className="max-w-full max-h-full shadow-lg rounded-lg"
+            alt=""
+            decoding="async"
+            className="
+              max-w-full
+              max-h-[90vh]
+              object-contain
+              select-none
+            "
           />
         )}
       </div>
     </div>
   );
 }
-
-export default LoadImage;

@@ -1,32 +1,54 @@
 import { Link } from "react-router-dom";
 
-export default function Header(props) {
-  console.log(props.page);
+export default function Header({ page }) {
   return (
-    <div className="flex bg-blue-600 px-[8px] md:px-[18px] text-white w-screen h-[60px] md:h-[80px] flex-row justify-center items-center">
-      <Link to="/" className="flex justify-start items-center">
-        <h1 className="text-center text-[18px] md:text-[40px] font-bold">
-          PASTE.UNLINKLY
-          <span className="text-[8px] ml-[4px] md:text-[12px]">v4.0</span>
-        </h1>
-      </Link>
-
-      <img
-        src="./images/line.png"
-        alt=""
-        className={`invert h-[70%] ${
-          props.page === "home" ? "hidden" : "block"
-        }`}
-      />
-
+    <header
+      className="
+        sticky top-0 z-40
+        h-[56px] md:h-[72px]
+        w-full
+        flex items-center
+        px-3 md:px-6
+        bg-white/80
+        backdrop-blur-xl
+        border-b border-white/40
+        shadow-[0_1px_0_rgba(0,0,0,0.04)]
+      "
+    >
+      {/* BRAND BADGE */}
       <Link
         to="/"
-        className={`text-[14px] md:text-[18px] h-[40px] flex items-center bg-red-400 text-white px-[15px] md:ml-[10px] rounded-[4px] ${
-          props.page === "home" ? "hidden" : "block"
-        }`}
+        className="
+          flex items-center gap-2
+          px-3 py-1.5
+          rounded-full
+          bg-gray-900/90
+          text-white
+          text-sm md:text-base
+          font-semibold
+        "
       >
-        Share You Own Image
+        <span>PASTE</span>
+        <span className="text-xs opacity-70">v5.0</span>
       </Link>
-    </div>
+
+      {/* CTA */}
+      {page !== "home" && (
+        <Link
+          to="/"
+          className="
+            ml-auto
+            px-4 py-2
+            rounded-lg
+            text-sm md:text-base
+            bg-red-600
+            text-white
+            hover:bg-red-700
+          "
+        >
+          Share an Image
+        </Link>
+      )}
+    </header>
   );
 }

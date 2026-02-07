@@ -1,204 +1,257 @@
 import { useState, useEffect, useRef } from "react";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { storage } from "../firebase"; // Import Realtime Database
-import "../App.css";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { storage } from "../firebase";
 import Header from "../components/Header";
 
-function UploadImage() {
+export default function UploadImage() {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [url, setUrl] = useState("");
-  const [fName, setFName] = useState("");
+  const [error, setError] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [toast, setToast] = useState("");
 
-  const generateLinkButtonRef = useRef(null);
+  const generateButtonRef = useRef(null);
 
-  // Handle file selection from file input
+  /* ===============================
+     FILE SELECT
+  ================================ */
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      setFile(file);
-      setPreview(URL.createObjectURL(file));
+    const selected = e.target.files[0];
+    if (selected && selected.type.startsWith("image/")) {
+      setFile(selected);
+      setPreview(URL.createObjectURL(selected));
       setError("");
     } else {
       setError("Please select a valid image file");
     }
   };
 
-  // Handle image pasting from clipboard
+  /* ===============================
+     PASTE SUPPORT
+  ================================ */
   useEffect(() => {
     const handlePaste = (e) => {
-      const items = e.clipboardData.items;
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+      for (const item of e.clipboardData.items) {
         if (item.type.startsWith("image/")) {
-          const file = item.getAsFile();
-          setFile(file);
-          setPreview(URL.createObjectURL(file));
+          const pasted = item.getAsFile();
+          setFile(pasted);
+          setPreview(URL.createObjectURL(pasted));
           setError("");
         }
       }
     };
 
     window.addEventListener("paste", handlePaste);
-
-    return () => {
-      window.removeEventListener("paste", handlePaste);
-    };
+    return () => window.removeEventListener("paste", handlePaste);
   }, []);
 
-  // Handle form submission
-  const handleSubmit = async (e) => {
+  /* ===============================
+     UPLOAD
+  ================================ */
+  const handleSubmit = (e) => {
     e.preventDefault();
     if (!file) {
-      setError("Please Paste or Upload an Image");
+      setError("Paste or select an image first");
       return;
     }
 
     setLoading(true);
-    // Use milliseconds as the unique file name
-    const uniqueFileName = `${Date.now()}`;
-    const storageRef = ref(storage, `images/${uniqueFileName}`);
-    // const storageRef = ref(storage, `images/kajukatli`);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    setError("");
 
-    setFName(uniqueFileName);
+    const uniqueName = Date.now().toString();
+    setFileName(uniqueName);
+
+    const uploadTask = uploadBytesResumable(
+      ref(storage, `images/${uniqueName}`),
+      file,
+    );
 
     uploadTask.on(
       "state_changed",
-      (snapshot) => {
-        // Optional: Track progress
-      },
-      (error) => {
-        console.error("Upload error:", error);
+      null,
+      () => {
         setError("Failed to upload image");
         setLoading(false);
       },
-      () => {
-        getDownloadURL(uploadTask.snapshot.ref)
-          .then((downloadURL) => {
-            setUrl(downloadURL);
-            setLoading(false);
-            // copyToClipboard();
-          })
-          .catch((error) => {
-            console.error("Error getting download URL:", error); // Log the error during URL retrieval
-            setError("Failed to retrieve download URL");
-            setLoading(false);
-          });
+      async () => {
+        try {
+          await getDownloadURL(uploadTask.snapshot.ref);
+          setLoading(false);
+        } catch {
+          setError("Failed to retrieve image URL");
+          setLoading(false);
+        }
       },
     );
   };
 
-  // Handle copying to clipboard
+  /* ===============================
+     COPY LINK
+  ================================ */
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard
-        .writeText("https://paste.unlinkly.com/" + fName)
-        .then(alert("Link Copied"));
-    } catch (err) {
-      console.error("Failed to copy link:", err);
+      await navigator.clipboard.writeText(
+        "https://paste.unlinkly.com/" + fileName,
+      );
+      setToast("Link copied to clipboard");
+      setTimeout(() => setToast(""), 2000);
+    } catch {
+      setError("Failed to copy link");
     }
   };
 
-  // Handle keydown event for the "Enter" key to trigger button click
+  /* ===============================
+     ENTER KEY SUPPORT
+  ================================ */
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        if (generateLinkButtonRef.current) {
-          generateLinkButtonRef.current.click();
-        }
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter" && generateButtonRef.current) {
+        e.preventDefault();
+        generateButtonRef.current.click();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   return (
-    <div className="flex flex-col h-full justify-center items-center">
+    <div className="min-h-screen bg-gray-50 pb-[96px]">
       <Header page="home" />
 
-      <form
-        className="flex flex-col h-[calc(100vh-330px)] md:h-[calc(100vh-255px)] items-center p-[5px] w-screen"
-        onSubmit={handleSubmit}
-      >
-        {/* Image Preview Section */}
-        {preview ? (
-          <img className="h-full mb-4 rounded-lg" src={preview} alt="Preview" />
-        ) : (
-          <img
-            className="h-auto mb-4 rounded-lg"
-            src={"../images/paste.png"}
-            alt="Preview"
-          />
-        )}
+      {/* MAIN CONTENT */}
+      <div className="max-w-[900px] mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
+        {/* PASTE / PREVIEW ZONE */}
+        <div
+          className="
+            w-full
+            min-h-[50vh]
+            flex
+            items-center
+            justify-center
+            border-2 border-dashed border-gray-300
+            rounded-xl
+            bg-white
+            text-center
+          "
+        >
+          {preview ? (
+            <img
+              src={preview}
+              alt="Preview"
+              className="
+                max-w-full
+                max-h-[70vh]
+                object-contain
+              "
+            />
+          ) : (
+            <div className="space-y-2 px-4">
+              <p className="text-base sm:text-lg font-medium text-gray-700">
+                Paste an image
+              </p>
+              <p className="text-sm text-gray-500">
+                or select one from your device
+              </p>
+            </div>
+          )}
+        </div>
 
-        <div className="flex items-center justify-center">
-          {/* File Input */}
-          <h1 className="hidden md:block text-[14px] text-center md:text-[20px]">
-            Copy & Paste
-          </h1>
-
+        {/* FILE PICKER */}
+        <div className="flex justify-center mt-5 sm:mt-6">
           <input
             type="file"
             id="fileInput"
-            style={{ display: "none" }}
+            hidden
             onChange={handleFileChange}
           />
-
           <label
-            className="hidden md:block cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-[8px] md:hover:bg-gray-300 active:bg-gray-300 py-3 w-[180px] ml-[20px] text-center text-[16px]"
             htmlFor="fileInput"
+            className="
+              w-full sm:w-auto
+              text-center
+              px-6 py-3
+              rounded-lg
+              bg-gray-100
+              text-gray-700
+              hover:bg-gray-200
+            "
           >
-            Or Select an Image
-          </label>
-
-          <label
-            className="md:hidden cursor-pointer text-gray-600 border-2 border-gray-400 border-dashed rounded-[8px] md:hover:bg-gray-300 active:bg-gray-300 py-3 w-[180px] ml-[20px] text-center text-[16px]"
-            htmlFor="fileInput"
-          >
-            Tap to select an Image
+            Select image
           </label>
         </div>
-      </form>
+      </div>
 
-      {/* URL and Error Display */}
-      <div className="flex flex-col justify-cente items-center w-full fixed bottom-0 left-0">
-        {url && (
-          <span
-            className="bg-green-600 text-center text-white mb-[5px] py-[8px] px-[20px] text-[14px] cursor-pointer md:text-[16px] rounded-[10px]"
-            id="copyText"
-            onClick={copyToClipboard}
-          >
-            {/* {`https://paste.artalic.com/${fName}`} <br />  */}
-            Click here to copy the link
-          </span>
-        )}
-        {error && (
-          <p className="bg-red-600 text-white px-[20px] py-[2px] text-[14px] md:text-[16px] md:mt-[35px] mt-[25px] mb-[5px] rounded-[20px]">
-            {error}
-          </p>
-        )}
-
-        {/* Generate Link Button */}
-        <button
-          type="button"
-          ref={generateLinkButtonRef}
-          onClick={handleSubmit}
-          disabled={loading}
-          className="text-blue-100 bg-blue-600 rounded-md py-3 mb-[5px] md:mb-[10px] active:bg-blue-800 md:hover:bg-blue-800 text-lg w-[240px]"
+      {/* TOAST */}
+      {toast && (
+        <div
+          className="
+            fixed
+            bottom-[96px]
+            left-1/2
+            -translate-x-1/2
+            z-40
+            px-4 py-2
+            rounded-lg
+            bg-black/80
+            text-white
+            text-sm
+            backdrop-blur-md
+          "
         >
-          {loading ? "Generating Link..." : "Generate Link"}
-        </button>
+          {toast}
+        </div>
+      )}
+
+      {/* BOTTOM ACTION BAR */}
+      <div
+        className="
+          fixed bottom-0 left-0 right-0
+          z-30
+          bg-white/80
+          backdrop-blur-xl
+          border-t border-white/40
+        "
+      >
+        <div className="flex flex-col items-center gap-2 px-4 py-3">
+          {fileName && !loading && (
+            <button
+              onClick={copyToClipboard}
+              className="
+                w-full sm:w-auto
+                text-sm
+                px-4 py-2
+                rounded-md
+                bg-green-600
+                text-white
+              "
+            >
+              Copy link
+            </button>
+          )}
+
+          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+
+          <button
+            ref={generateButtonRef}
+            onClick={handleSubmit}
+            disabled={loading}
+            className="
+              w-full sm:w-auto
+              px-6 py-3
+              rounded-xl
+              text-white
+              bg-blue-600
+              hover:bg-blue-700
+              disabled:opacity-50
+              text-base
+            "
+          >
+            {loading ? "Generating link…" : "Generate link"}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
-export default UploadImage;

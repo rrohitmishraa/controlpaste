@@ -3,6 +3,7 @@ import UploadImage from "./pages/UploadImage";
 import LoadImage from "./pages/ShowImage";
 import UploadWithName from "./pages/UploadWithName";
 import Gallery from "./pages/Gallery";
+import "./App.css";
 
 function App() {
   return (
