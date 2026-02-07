@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import { storage } from "../firebase"; // Import Realtime Database
 import "../App.css";
@@ -87,7 +87,7 @@ function UploadImage() {
             setError("Failed to retrieve download URL");
             setLoading(false);
           });
-      }
+      },
     );
   };
 

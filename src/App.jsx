@@ -1,8 +1,8 @@
-import React from "react";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import UploadImage from "./pages/UploadImage";
 import LoadImage from "./pages/ShowImage";
-import UuploadWithName from "./pages/UploadWithName";
+import UploadWithName from "./pages/UploadWithName";
+import Gallery from "./pages/Gallery";
 
 function App() {
   return (
@@ -11,7 +11,8 @@ function App() {
         <Route path="/" element={<UploadImage />} />
         <Route path="/:id" element={<LoadImage />} />
         <Route path="/home" element={<UploadImage />} />
-        <Route path="/255141" element={<UuploadWithName />} />
+        <Route path="/255141" element={<UploadWithName />} />
+        <Route path="/gallery" element={<Gallery />} />
       </Routes>
     </Router>
   );
