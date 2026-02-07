@@ -7,7 +7,7 @@ export default function Header(props) {
       <Link to="/" className="flex justify-start items-center">
         <h1 className="text-center text-[18px] md:text-[40px] font-bold">
           PASTE.UNLINKLY
-          <span className="text-[8px] ml-[4px] md:text-[12px]">v3.0</span>
+          <span className="text-[8px] ml-[4px] md:text-[12px]">v4.0</span>
         </h1>
       </Link>
 
