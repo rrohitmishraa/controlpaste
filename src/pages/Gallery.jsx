@@ -27,7 +27,6 @@ export default function Gallery() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const paginationRef = useRef(null);
   const pageRefs = useRef({});
 
   /* ===============================
@@ -45,9 +44,7 @@ export default function Gallery() {
         }
 
         const imagesRes = await listAll(imagesFolder);
-        const ids = imagesRes.items.map((i) => i.name);
-
-        setAllIds(shuffleArray(ids));
+        setAllIds(shuffleArray(imagesRes.items.map((i) => i.name)));
       } catch (err) {
         console.error(err);
         setError("Failed to load gallery");
@@ -83,12 +80,12 @@ export default function Gallery() {
   }, [allIds, currentPage]);
 
   /* ===============================
-     AUTO-SCROLL ACTIVE PAGE INTO VIEW
+     AUTO-SCROLL ACTIVE PAGE (MOBILE)
   ================================ */
   useEffect(() => {
-    const activeBtn = pageRefs.current[currentPage];
-    if (activeBtn) {
-      activeBtn.scrollIntoView({
+    const btn = pageRefs.current[currentPage];
+    if (btn) {
+      btn.scrollIntoView({
         behavior: "smooth",
         inline: "center",
         block: "nearest",
@@ -122,7 +119,7 @@ export default function Gallery() {
               sm:columns-2
               lg:columns-3
               xl:columns-4
-              gap-4 sm:gap-5
+              gap-3 sm:gap-4
             "
           >
             {images.map((img) => (
@@ -130,26 +127,11 @@ export default function Gallery() {
                 key={img.id}
                 to={`/${img.id}`}
                 target="_blank"
-                className="
-                  block mb-4 sm:mb-5
-                  break-inside-avoid
-                  bg-white
-                  rounded-xl
-                  border border-gray-200
-                  shadow-sm
-                  hover:shadow-md
-                  transition-shadow
-                "
+                className="block mb-3 sm:mb-4 break-inside-avoid"
               >
-                {/* SEPARATOR */}
-                <div className="px-3 pt-3">
-                  <div className="h-[1.5px] w-full bg-gray-300/60" />
-                </div>
-
-                {/* IMAGE */}
                 <img
                   src={img.url}
-                  alt={img.id}
+                  alt=""
                   loading="lazy"
                   decoding="async"
                   className="
@@ -157,7 +139,6 @@ export default function Gallery() {
                     block
                     object-contain
                     bg-gray-100
-                    max-h-[70vh]
                   "
                 />
               </Link>
@@ -166,7 +147,7 @@ export default function Gallery() {
         </div>
       )}
 
-      {/* PAGINATION — MOBILE SAFE */}
+      {/* PAGINATION */}
       {totalPages > 1 && (
         <div
           className="
@@ -174,18 +155,17 @@ export default function Gallery() {
             z-30
             bg-white/80
             backdrop-blur-xl
-            backdrop-saturate-200
             border-t border-white/40
-            shadow-[0_-1px_0_rgba(0,0,0,0.04)]
           "
         >
+          {/* MOBILE: SCROLLABLE */}
           <div
-            ref={paginationRef}
             className="
               flex gap-2
               px-3 py-3
               overflow-x-auto
-              scrollbar-none
+              md:overflow-visible
+              md:justify-center
             "
           >
             {Array.from({ length: totalPages }).map((_, i) => {

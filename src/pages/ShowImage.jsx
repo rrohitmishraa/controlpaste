@@ -31,7 +31,7 @@ export default function LoadImage() {
   }, [id]);
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       <Header />
 
       {/* IMAGE VIEWPORT */}
