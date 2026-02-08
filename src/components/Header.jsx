@@ -62,7 +62,7 @@ export default function Header({ page }) {
           "
         >
           <span>PASTE</span>
-          <span className="text-xs opacity-70">v5.1</span>
+          <span className="text-xs opacity-70">v5.2</span>
         </Link>
 
         {/* CENTER: SEARCH */}

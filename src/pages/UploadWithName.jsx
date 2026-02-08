@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import imageCompression from "browser-image-compression";
 import { storage } from "../firebase";
 import Header from "../components/Header";
 
@@ -8,11 +9,14 @@ export default function UploadWithName() {
   const [preview, setPreview] = useState(null);
   const [name, setName] = useState("");
   const [finalName, setFinalName] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
 
+  const [stage, setStage] = useState("idle"); // idle | optimizing | uploading
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const generateButtonRef = useRef(null);
+  const busy = stage !== "idle";
 
   /* ===============================
      FILE SELECT
@@ -48,9 +52,22 @@ export default function UploadWithName() {
   }, []);
 
   /* ===============================
+     WEBP CONVERSION (NO RESIZE)
+  ================================ */
+  const convertToWebP = async (imageFile) => {
+    setStage("optimizing");
+
+    return await imageCompression(imageFile, {
+      fileType: "image/webp",
+      initialQuality: 0.85,
+      useWebWorker: true,
+    });
+  };
+
+  /* ===============================
      UPLOAD
   ================================ */
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!file || !name.trim()) {
@@ -58,36 +75,50 @@ export default function UploadWithName() {
       return;
     }
 
-    setLoading(true);
     setError("");
+    setUploadProgress(0);
 
-    const safeName = name.trim();
-    setFinalName(safeName);
+    try {
+      // 1️⃣ OPTIMIZE
+      const webpFile = await convertToWebP(file);
 
-    const uploadTask = uploadBytesResumable(
-      ref(storage, `images/${safeName}`),
-      file,
-    );
+      // 2️⃣ SAFE NAME (NO EXTENSION)
+      const safeName = name.trim();
+      setFinalName(safeName);
+      setStage("uploading");
 
-    uploadTask.on(
-      "state_changed",
-      null,
-      () => {
-        setError("Failed to upload image");
-        setLoading(false);
-      },
-      async () => {
-        try {
+      // 3️⃣ UPLOAD WITH WEBP METADATA
+      const uploadTask = uploadBytesResumable(
+        ref(storage, `images/${safeName}`),
+        webpFile,
+        {
+          contentType: "image/webp",
+        },
+      );
+
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const percent =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setUploadProgress(Math.round(percent));
+        },
+        () => {
+          setError("Failed to upload image");
+          setStage("idle");
+        },
+        async () => {
           await getDownloadURL(uploadTask.snapshot.ref);
-          setLoading(false);
+          setStage("idle");
           setToast("Image uploaded successfully");
           setTimeout(() => setToast(""), 2000);
-        } catch {
-          setError("Failed to retrieve image URL");
-          setLoading(false);
-        }
-      },
-    );
+        },
+      );
+    } catch (err) {
+      console.error(err);
+      setError("Image optimization failed");
+      setStage("idle");
+    }
   };
 
   /* ===============================
@@ -126,32 +157,16 @@ export default function UploadWithName() {
 
       {/* MAIN CONTENT */}
       <div className="max-w-[900px] mx-auto px-3 sm:px-4 mt-4 sm:mt-6 space-y-5">
-        {/* PASTE / PREVIEW ZONE */}
-        <div
-          className="
-            w-full
-            min-h-[50vh]
-            flex
-            items-center
-            justify-center
-            border-2 border-dashed border-gray-300
-            rounded-xl
-            bg-white
-            text-center
-          "
-        >
+        {/* PREVIEW */}
+        <div className="w-full min-h-[50vh] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white">
           {preview ? (
             <img
               src={preview}
               alt="Preview"
-              className="
-                max-w-full
-                max-h-[70vh]
-                object-contain
-              "
+              className="max-w-full max-h-[70vh] object-contain"
             />
           ) : (
-            <div className="space-y-2 px-4">
+            <div className="space-y-2 px-4 text-center">
               <p className="text-base sm:text-lg font-medium text-gray-700">
                 Paste an image
               </p>
@@ -167,17 +182,9 @@ export default function UploadWithName() {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          disabled={busy}
           placeholder="Enter image name"
-          className="
-            w-full
-            px-4 py-3
-            text-base
-            rounded-lg
-            border border-gray-300
-            bg-white
-            focus:outline-none
-            focus:ring-2 focus:ring-blue-500/30
-          "
+          className="w-full px-4 py-3 text-base rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30"
         />
 
         {/* FILE PICKER */}
@@ -187,18 +194,15 @@ export default function UploadWithName() {
             id="fileInput"
             hidden
             onChange={handleFileChange}
+            disabled={busy}
           />
           <label
             htmlFor="fileInput"
-            className="
-              w-full sm:w-auto
-              text-center
-              px-6 py-3
-              rounded-lg
-              bg-gray-100
-              text-gray-700
-              hover:bg-gray-200
-            "
+            className={`w-full sm:w-auto text-center px-6 py-3 rounded-lg ${
+              busy
+                ? "bg-gray-200 text-gray-400"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
           >
             Select image
           </label>
@@ -207,50 +211,31 @@ export default function UploadWithName() {
 
       {/* TOAST */}
       {toast && (
-        <div
-          className="
-            fixed
-            bottom-[96px]
-            left-1/2
-            -translate-x-1/2
-            z-40
-            px-4 py-2
-            rounded-lg
-            bg-black/80
-            text-white
-            text-sm
-            backdrop-blur-md
-          "
-        >
+        <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-lg bg-black/80 text-white text-sm backdrop-blur-md">
           {toast}
         </div>
       )}
 
       {/* BOTTOM ACTION BAR */}
-      <div
-        className="
-          fixed bottom-0 left-0 right-0
-          z-30
-          bg-white/80
-          backdrop-blur-xl
-          border-t border-white/40
-        "
-      >
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/80 backdrop-blur-xl border-t border-white/40">
         <div className="flex flex-col items-center gap-2 px-4 py-3">
-          {finalName && !loading && (
+          {finalName && !busy && (
             <button
               onClick={copyToClipboard}
-              className="
-                w-full sm:w-auto
-                text-sm
-                px-4 py-2
-                rounded-md
-                bg-green-600
-                text-white
-              "
+              className="w-full sm:w-auto text-sm px-4 py-2 rounded-md bg-green-600 text-white"
             >
               Copy link
             </button>
+          )}
+
+          {stage === "optimizing" && (
+            <p className="text-sm text-gray-600">Optimizing image…</p>
+          )}
+
+          {stage === "uploading" && (
+            <p className="text-sm text-gray-600">
+              Uploading image… {uploadProgress}%
+            </p>
           )}
 
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
@@ -258,19 +243,10 @@ export default function UploadWithName() {
           <button
             ref={generateButtonRef}
             onClick={handleSubmit}
-            disabled={loading}
-            className="
-              w-full sm:w-auto
-              px-6 py-3
-              rounded-xl
-              text-white
-              bg-blue-600
-              hover:bg-blue-700
-              disabled:opacity-50
-              text-base
-            "
+            disabled={busy}
+            className="w-full sm:w-auto px-6 py-3 rounded-xl text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-base"
           >
-            {loading ? "Generating link…" : "Generate link"}
+            {busy ? "Please wait…" : "Generate link"}
           </button>
         </div>
       </div>
