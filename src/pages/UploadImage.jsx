@@ -1,47 +1,66 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import imageCompression from "browser-image-compression";
 import { storage } from "../firebase";
 import Header from "../components/Header";
 
 export default function UploadImage() {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [error, setError] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [images, setImages] = useState([]);
   const [toast, setToast] = useState("");
-
-  const [stage, setStage] = useState("idle"); // idle | optimizing | uploading
-  const [uploadProgress, setUploadProgress] = useState(0);
-
-  const generateButtonRef = useRef(null);
+  const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
 
   /* ===============================
-     FILE SELECT
+     ADD FILES
   ================================ */
-  const handleFileChange = (e) => {
-    const selected = e.target.files[0];
-    if (selected && selected.type.startsWith("image/")) {
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
-      setError("");
-    } else {
-      setError("Please select a valid image file");
+
+  const addFiles = (fileList) => {
+    const valid = Array.from(fileList)
+      .filter((f) => f.type.startsWith("image/"))
+      .map((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        preview: URL.createObjectURL(file),
+        stage: "idle",
+        progress: 0,
+        finalName: "",
+      }));
+
+    if (valid.length === 0) {
+      setError("Only image files allowed");
+      return;
     }
+
+    setImages((prev) => [...prev, ...valid]);
+    setError("");
+  };
+
+  const handleFileChange = (e) => {
+    addFiles(e.target.files);
   };
 
   /* ===============================
      PASTE SUPPORT
   ================================ */
+
   useEffect(() => {
     const handlePaste = (e) => {
-      for (const item of e.clipboardData.items) {
+      if (!e.clipboardData) return;
+
+      const items = Array.from(e.clipboardData.items);
+      const files = [];
+
+      items.forEach((item) => {
         if (item.type.startsWith("image/")) {
-          const pasted = item.getAsFile();
-          setFile(pasted);
-          setPreview(URL.createObjectURL(pasted));
-          setError("");
+          const file = item.getAsFile();
+          if (file) files.push(file);
         }
+      });
+
+      if (files.length > 0) {
+        e.preventDefault();
+        addFiles(files);
       }
     };
 
@@ -50,12 +69,69 @@ export default function UploadImage() {
   }, []);
 
   /* ===============================
-     WEBP CONVERSION (NO RESIZE)
+     GLOBAL DRAG & DROP
   ================================ */
-  const convertToWebP = async (imageFile) => {
-    setStage("optimizing");
 
-    return await imageCompression(imageFile, {
+  useEffect(() => {
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+
+    const handleDragLeave = (e) => {
+      e.preventDefault();
+      setIsDragging(false);
+    };
+
+    const handleDrop = (e) => {
+      e.preventDefault();
+      setIsDragging(false);
+      addFiles(e.dataTransfer.files);
+    };
+
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("dragleave", handleDragLeave);
+    window.addEventListener("drop", handleDrop);
+
+    return () => {
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("dragleave", handleDragLeave);
+      window.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
+  /* ===============================
+     ANIMATION DETECTION
+  ================================ */
+
+  const isAnimatedGif = async (file) => {
+    if (file.type !== "image/gif") return false;
+
+    const buffer = await file.arrayBuffer();
+    const view = new Uint8Array(buffer);
+
+    let frames = 0;
+    for (let i = 0; i < view.length - 9; i++) {
+      if (view[i] === 0x21 && view[i + 1] === 0xf9 && view[i + 2] === 0x04) {
+        frames++;
+        if (frames > 1) return true;
+      }
+    }
+    return false;
+  };
+
+  /* ===============================
+     PROCESS FILE
+  ================================ */
+
+  const processFile = async (file) => {
+    const animated = await isAnimatedGif(file);
+
+    if (animated) {
+      return file; // preserve animation
+    }
+
+    return await imageCompression(file, {
       fileType: "image/webp",
       initialQuality: 0.85,
       useWebWorker: true,
@@ -63,175 +139,184 @@ export default function UploadImage() {
   };
 
   /* ===============================
-     UPLOAD
+     UPLOAD SINGLE
   ================================ */
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!file) {
-      setError("Paste or select an image first");
-      return;
-    }
 
-    setError("");
-    setUploadProgress(0);
-
+  const uploadSingle = async (img) => {
     try {
-      // 1️⃣ OPTIMIZE
-      const webpFile = await convertToWebP(file);
-
-      // 2️⃣ PREPARE UPLOAD
-      const uniqueName = `${Date.now()}`;
-      setFileName(uniqueName.replace(".webp", ""));
-      setStage("uploading");
-
-      const uploadTask = uploadBytesResumable(
-        ref(storage, `images/${uniqueName}`),
-        webpFile,
+      setImages((prev) =>
+        prev.map((i) => (i.id === img.id ? { ...i, stage: "processing" } : i)),
       );
 
-      // 3️⃣ TRACK UPLOAD PROGRESS
+      const processedFile = await processFile(img.file);
+
+      const fileName = `${Date.now()}`;
+
+      const uploadTask = uploadBytesResumable(
+        ref(storage, `images/${fileName}`),
+        processedFile,
+        { contentType: processedFile.type },
+      );
+
+      setImages((prev) =>
+        prev.map((i) => (i.id === img.id ? { ...i, stage: "uploading" } : i)),
+      );
+
       uploadTask.on(
         "state_changed",
         (snapshot) => {
           const percent =
             (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          setUploadProgress(Math.round(percent));
+
+          setImages((prev) =>
+            prev.map((i) =>
+              i.id === img.id ? { ...i, progress: Math.round(percent) } : i,
+            ),
+          );
         },
-        () => {
-          setError("Failed to upload image");
-          setStage("idle");
-        },
+        () => setError("Upload failed"),
         async () => {
           await getDownloadURL(uploadTask.snapshot.ref);
-          setStage("idle");
+
+          setImages((prev) =>
+            prev.map((i) =>
+              i.id === img.id
+                ? {
+                    ...i,
+                    stage: "done",
+                    finalName: fileName,
+                  }
+                : i,
+            ),
+          );
         },
       );
-    } catch (err) {
-      console.error(err);
-      setError("Image optimization failed");
-      setStage("idle");
-    }
-  };
-
-  /* ===============================
-     COPY LINK
-  ================================ */
-  const copyToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        "https://paste.unlinkly.com/" + fileName,
-      );
-      setToast("Link copied to clipboard");
-      setTimeout(() => setToast(""), 2000);
     } catch {
-      setError("Failed to copy link");
+      setError("Processing failed");
     }
   };
 
-  /* ===============================
-     ENTER KEY SUPPORT
-  ================================ */
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Enter" && generateButtonRef.current) {
-        e.preventDefault();
-        generateButtonRef.current.click();
+  const uploadAll = () => {
+    images.forEach((img) => {
+      if (img.stage === "idle") {
+        uploadSingle(img);
       }
-    };
+    });
+  };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  const removeImage = (id) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
+  };
 
-  const busy = stage !== "idle";
+  const copyLink = async (name) => {
+    await navigator.clipboard.writeText("https://paste.unlinkly.com/" + name);
+    setToast("Link copied");
+    setTimeout(() => setToast(""), 2000);
+  };
+
+  /* ===============================
+     UI
+  ================================ */
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-[96px]">
+    <div className="min-h-screen bg-gray-50 pb-[120px] relative">
       <Header page="home" />
 
-      {/* MAIN CONTENT */}
-      <div className="max-w-[900px] mx-auto px-3 sm:px-4 mt-4 sm:mt-6">
-        <div className="w-full min-h-[50vh] flex items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white">
-          {preview ? (
-            <img
-              src={preview}
-              alt="Preview"
-              className="max-w-full max-h-[70vh] object-contain"
-            />
-          ) : (
-            <div className="space-y-2 px-4 text-center">
-              <p className="text-base sm:text-lg font-medium text-gray-700">
-                Paste an image
-              </p>
-              <p className="text-sm text-gray-500">
-                or select one from your device
-              </p>
-            </div>
-          )}
+      {/* FULL SCREEN DROP OVERLAY */}
+      {isDragging && (
+        <div className="fixed inset-0 z-[9999] bg-blue-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+          <div className="bg-white shadow-2xl rounded-2xl px-10 py-8 text-center border border-blue-400">
+            <p className="text-xl font-semibold text-blue-600">
+              Drop images anywhere
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              Drag & Drop • Paste • Or Select Images
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-[1000px] mx-auto px-4 mt-6">
+        <div className="text-center text-gray-600 mb-6">
+          Drag & Drop • Paste • Or Select Images
         </div>
 
-        <div className="flex justify-center mt-5 sm:mt-6">
+        <div className="flex justify-center">
           <input
             type="file"
             id="fileInput"
             hidden
+            multiple
             onChange={handleFileChange}
-            disabled={busy}
           />
           <label
             htmlFor="fileInput"
-            className={`w-full sm:w-auto px-6 py-3 rounded-lg text-center ${
-              busy
-                ? "bg-gray-200 text-gray-400"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
+            className="px-6 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 cursor-pointer"
           >
-            Select image
+            Select Images
           </label>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">
+          {images.map((img) => (
+            <motion.div
+              key={img.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="relative bg-white border rounded-xl p-2"
+            >
+              <img
+                src={img.preview}
+                alt=""
+                className="w-full h-32 object-cover rounded-lg"
+              />
+
+              <button
+                onClick={() => removeImage(img.id)}
+                className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full"
+              >
+                ✕
+              </button>
+
+              {img.stage === "uploading" && (
+                <div className="text-xs mt-2">{img.progress}%</div>
+              )}
+
+              {img.stage === "done" && (
+                <button
+                  onClick={() => copyLink(img.finalName)}
+                  className="text-xs mt-2 w-full bg-green-600 text-white py-1 rounded"
+                >
+                  Copy Link
+                </button>
+              )}
+            </motion.div>
+          ))}
         </div>
       </div>
 
-      {/* TOAST */}
+      {images.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 flex justify-center">
+          <button
+            onClick={uploadAll}
+            className="px-8 py-3 rounded-xl text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Upload All
+          </button>
+        </div>
+      )}
+
       {toast && (
-        <div className="fixed bottom-[96px] left-1/2 -translate-x-1/2 z-40 px-4 py-2 rounded-lg bg-black/80 text-white text-sm backdrop-blur-md">
+        <div className="fixed bottom-[80px] left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg bg-black/80 text-white text-sm">
           {toast}
         </div>
       )}
 
-      {/* BOTTOM ACTION BAR */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/80 backdrop-blur-xl border-t border-white/40">
-        <div className="flex flex-col items-center gap-2 px-4 py-3">
-          {fileName && !busy && (
-            <button
-              onClick={copyToClipboard}
-              className="w-full sm:w-auto text-sm px-4 py-2 rounded-md bg-green-600 text-white"
-            >
-              Copy link
-            </button>
-          )}
-
-          {stage === "optimizing" && (
-            <p className="text-sm text-gray-600">Optimizing image…</p>
-          )}
-
-          {stage === "uploading" && (
-            <p className="text-sm text-gray-600">
-              Uploading image… {uploadProgress}%
-            </p>
-          )}
-
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-
-          <button
-            ref={generateButtonRef}
-            onClick={handleSubmit}
-            disabled={busy}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-base"
-          >
-            {busy ? "Please wait…" : "Generate link"}
-          </button>
+      {error && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded">
+          {error}
         </div>
-      </div>
+      )}
     </div>
   );
 }
