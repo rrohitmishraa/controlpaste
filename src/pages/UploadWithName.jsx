@@ -42,7 +42,7 @@ export default function UploadWithName() {
   };
 
   /* =====================================================
-     GLOBAL DRAG & DROP (FULL SCREEN)
+     GLOBAL DRAG & DROP
   ===================================================== */
 
   useEffect(() => {
@@ -81,10 +81,9 @@ export default function UploadWithName() {
     const handlePaste = (e) => {
       if (!e.clipboardData) return;
 
-      const items = Array.from(e.clipboardData.items);
       const files = [];
 
-      items.forEach((item) => {
+      Array.from(e.clipboardData.items).forEach((item) => {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
           if (file) files.push(file);
@@ -120,12 +119,56 @@ export default function UploadWithName() {
   };
 
   /* =====================================================
+     ANIMATION DETECTION
+  ===================================================== */
+
+  const isAnimatedGif = async (file) => {
+    if (file.type !== "image/gif") return false;
+
+    const buffer = await file.arrayBuffer();
+    const view = new Uint8Array(buffer);
+
+    let frames = 0;
+    for (let i = 0; i < view.length - 9; i++) {
+      if (view[i] === 0x21 && view[i + 1] === 0xf9 && view[i + 2] === 0x04) {
+        frames++;
+        if (frames > 1) return true;
+      }
+    }
+    return false;
+  };
+
+  const isAnimatedWebP = async (file) => {
+    if (file.type !== "image/webp") return false;
+
+    const buffer = await file.arrayBuffer();
+    const view = new Uint8Array(buffer);
+
+    // Look for "ANIM" chunk signature
+    for (let i = 0; i < view.length - 4; i++) {
+      if (
+        view[i] === 0x41 &&
+        view[i + 1] === 0x4e &&
+        view[i + 2] === 0x49 &&
+        view[i + 3] === 0x4d
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  /* =====================================================
      PROCESS FILE
   ===================================================== */
 
   const processFile = async (file) => {
-    // Keep GIFs intact (preserve animation)
-    if (file.type === "image/gif") {
+    const animatedGif = await isAnimatedGif(file);
+    const animatedWebp = await isAnimatedWebP(file);
+
+    // Preserve animated files
+    if (animatedGif || animatedWebp) {
       return file;
     }
 
@@ -177,9 +220,7 @@ export default function UploadWithName() {
             ),
           );
         },
-        () => {
-          setError("Upload failed");
-        },
+        () => setError("Upload failed"),
         async () => {
           await getDownloadURL(uploadTask.snapshot.ref);
 
@@ -203,15 +244,9 @@ export default function UploadWithName() {
 
   const uploadAll = () => {
     images.forEach((img) => {
-      if (img.stage === "idle") {
-        uploadSingle(img);
-      }
+      if (img.stage === "idle") uploadSingle(img);
     });
   };
-
-  /* =====================================================
-     COPY LINK
-  ===================================================== */
 
   const copyLink = async (name) => {
     await navigator.clipboard.writeText("https://paste.unlinkly.com/" + name);
@@ -220,14 +255,13 @@ export default function UploadWithName() {
   };
 
   /* =====================================================
-     UI
+     UI (UNCHANGED)
   ===================================================== */
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[120px] relative">
       <Header page="home" />
 
-      {/* DRAG OVERLAY */}
       {isDragging && (
         <div className="fixed inset-0 z-[9999] bg-blue-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
           <div className="bg-white shadow-2xl rounded-2xl px-10 py-8 text-center border border-blue-400">
@@ -245,7 +279,7 @@ export default function UploadWithName() {
         <div className="text-center text-gray-600 mb-6">
           Name • Drag & Drop • Paste • Or Select Images
         </div>
-        {/* FILE PICKER */}
+
         <div className="flex justify-center mb-8">
           <input
             type="file"
@@ -262,7 +296,6 @@ export default function UploadWithName() {
           </label>
         </div>
 
-        {/* IMAGE GRID */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {images.map((img) => (
             <motion.div

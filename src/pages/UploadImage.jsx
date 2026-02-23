@@ -48,10 +48,9 @@ export default function UploadImage() {
     const handlePaste = (e) => {
       if (!e.clipboardData) return;
 
-      const items = Array.from(e.clipboardData.items);
       const files = [];
 
-      items.forEach((item) => {
+      Array.from(e.clipboardData.items).forEach((item) => {
         if (item.type.startsWith("image/")) {
           const file = item.getAsFile();
           if (file) files.push(file);
@@ -120,17 +119,40 @@ export default function UploadImage() {
     return false;
   };
 
+  const isAnimatedWebP = async (file) => {
+    if (file.type !== "image/webp") return false;
+
+    const buffer = await file.arrayBuffer();
+    const view = new Uint8Array(buffer);
+
+    // Look for "ANIM" chunk
+    for (let i = 0; i < view.length - 4; i++) {
+      if (
+        view[i] === 0x41 &&
+        view[i + 1] === 0x4e &&
+        view[i + 2] === 0x49 &&
+        view[i + 3] === 0x4d
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   /* ===============================
      PROCESS FILE
   ================================ */
 
   const processFile = async (file) => {
-    const animated = await isAnimatedGif(file);
+    const animatedGif = await isAnimatedGif(file);
+    const animatedWebp = await isAnimatedWebP(file);
 
-    if (animated) {
-      return file; // preserve animation
+    // Preserve animated files
+    if (animatedGif || animatedWebp) {
+      return file;
     }
 
+    // Convert everything else to WebP
     return await imageCompression(file, {
       fileType: "image/webp",
       initialQuality: 0.85,
@@ -149,7 +171,6 @@ export default function UploadImage() {
       );
 
       const processedFile = await processFile(img.file);
-
       const fileName = `${Date.now()}`;
 
       const uploadTask = uploadBytesResumable(
@@ -181,11 +202,7 @@ export default function UploadImage() {
           setImages((prev) =>
             prev.map((i) =>
               i.id === img.id
-                ? {
-                    ...i,
-                    stage: "done",
-                    finalName: fileName,
-                  }
+                ? { ...i, stage: "done", finalName: fileName }
                 : i,
             ),
           );
@@ -198,9 +215,7 @@ export default function UploadImage() {
 
   const uploadAll = () => {
     images.forEach((img) => {
-      if (img.stage === "idle") {
-        uploadSingle(img);
-      }
+      if (img.stage === "idle") uploadSingle(img);
     });
   };
 
@@ -209,7 +224,7 @@ export default function UploadImage() {
   };
 
   const copyLink = async (name) => {
-    await navigator.clipboard.writeText("https://paste.unlinkly.com/" + name);
+    await navigator.clipboard.writeText(`https://paste.unlinkly.com/${name}`);
     setToast("Link copied");
     setTimeout(() => setToast(""), 2000);
   };
@@ -222,7 +237,6 @@ export default function UploadImage() {
     <div className="min-h-screen bg-gray-50 pb-[120px] relative">
       <Header page="home" />
 
-      {/* FULL SCREEN DROP OVERLAY */}
       {isDragging && (
         <div className="fixed inset-0 z-[9999] bg-blue-600/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
           <div className="bg-white shadow-2xl rounded-2xl px-10 py-8 text-center border border-blue-400">
