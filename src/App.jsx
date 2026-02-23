@@ -4,6 +4,7 @@ import LoadImage from "./pages/ShowImage";
 import UploadWithName from "./pages/UploadWithName";
 import Gallery from "./pages/Gallery";
 import "./App.css";
+import Visitors from "./pages/Visitors";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/home" element={<UploadImage />} />
         <Route path="/255141" element={<UploadWithName />} />
         <Route path="/gallery" element={<Gallery />} />
+        <Route path="/visitors" element={<Visitors />} />
       </Routes>
     </Router>
   );

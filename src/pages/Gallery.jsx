@@ -7,7 +7,7 @@ import Header from "../components/Header";
 const PAGE_SIZE = 8;
 
 /* ===============================
-   SHUFFLE (Fisher–Yates)
+   SHUFFLE
 ================================ */
 const shuffleArray = (array) => {
   const arr = [...array];
@@ -26,11 +26,12 @@ export default function Gallery() {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [copiedId, setCopiedId] = useState(null);
 
   const pageRefs = useRef({});
 
   /* ===============================
-     LOAD + SHUFFLE IDS (ONCE)
+     LOAD IDS
   ================================ */
   useEffect(() => {
     const fetchIds = async () => {
@@ -56,8 +57,14 @@ export default function Gallery() {
     fetchIds();
   }, []);
 
+  useEffect(() => {
+    fetch(
+      "https://us-central1-controlpaste-app.cloudfunctions.net/logVisit?page=gallery",
+    );
+  }, []);
+
   /* ===============================
-     LOAD CURRENT PAGE IMAGES
+     LOAD PAGE IMAGES
   ================================ */
   useEffect(() => {
     const loadPageImages = async () => {
@@ -80,7 +87,18 @@ export default function Gallery() {
   }, [allIds, currentPage]);
 
   /* ===============================
-     AUTO-SCROLL ACTIVE PAGE (MOBILE)
+     COPY LINK
+  ================================ */
+  const copyLink = async (id) => {
+    const link = `https://paste.unlinkly.com/${id}`;
+    await navigator.clipboard.writeText(link);
+
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  /* ===============================
+     AUTO SCROLL PAGE BUTTON
   ================================ */
   useEffect(() => {
     const btn = pageRefs.current[currentPage];
@@ -99,7 +117,6 @@ export default function Gallery() {
     <div className="min-h-screen bg-gray-50 pb-[96px]">
       <Header page="gallery" />
 
-      {/* STATUS */}
       {loading && (
         <p className="text-center mt-8 text-sm text-gray-500">
           Loading gallery…
@@ -110,38 +127,40 @@ export default function Gallery() {
         <p className="text-center mt-8 text-sm text-red-500">{error}</p>
       )}
 
-      {/* GALLERY */}
       {!loading && !error && (
-        <div className="px-3 sm:px-4 mt-4 max-w-[1600px] mx-auto">
-          <div
-            className="
-              columns-1
-              sm:columns-2
-              lg:columns-3
-              xl:columns-4
-              gap-3 sm:gap-4
-            "
-          >
+        <div className="px-4 mt-6 max-w-[1600px] mx-auto">
+          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
             {images.map((img) => (
-              <Link
+              <div
                 key={img.id}
-                to={`/${img.id}`}
-                target="_blank"
-                className="block mb-3 sm:mb-4 break-inside-avoid"
+                className="mb-4 break-inside-avoid bg-white rounded-lg border shadow-sm overflow-hidden"
               >
-                <img
-                  src={img.url}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="
-                    w-full
-                    block
-                    object-contain
-                    bg-gray-100
-                  "
-                />
-              </Link>
+                {/* OPEN IN NEW TAB */}
+                <Link to={`/${img.id}`} target="_blank" className="block">
+                  <img
+                    src={img.url}
+                    alt=""
+                    loading="lazy"
+                    className="w-full object-contain bg-gray-100"
+                  />
+                </Link>
+
+                {/* INFO SECTION */}
+                <div className="p-3 space-y-2">
+                  <p className="text-xs text-gray-600 break-all">{img.id}</p>
+
+                  <button
+                    onClick={() => copyLink(img.id)}
+                    className={`w-full py-1.5 text-xs rounded-md transition ${
+                      copiedId === img.id
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {copiedId === img.id ? "Copied ✓" : "Copy Link"}
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -149,25 +168,8 @@ export default function Gallery() {
 
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div
-          className="
-            fixed bottom-0 left-0 right-0
-            z-30
-            bg-white/80
-            backdrop-blur-xl
-            border-t border-white/40
-          "
-        >
-          {/* MOBILE: SCROLLABLE */}
-          <div
-            className="
-              flex gap-2
-              px-3 py-3
-              overflow-x-auto
-              md:overflow-visible
-              md:justify-center
-            "
-          >
+        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t">
+          <div className="flex gap-2 px-4 py-3 overflow-x-auto md:justify-center">
             {Array.from({ length: totalPages }).map((_, i) => {
               const page = i + 1;
               const active = page === currentPage;
@@ -177,18 +179,11 @@ export default function Gallery() {
                   key={page}
                   ref={(el) => (pageRefs.current[page] = el)}
                   onClick={() => setSearchParams({ page })}
-                  className={`
-                    min-w-[44px] h-[44px]
-                    px-4
-                    rounded-lg
-                    text-sm font-medium
-                    shrink-0
-                    ${
-                      active
-                        ? "bg-red-600 text-white"
-                        : "bg-white/70 text-gray-700 hover:bg-white"
-                    }
-                  `}
+                  className={`min-w-[44px] h-[44px] px-4 rounded-lg text-sm font-medium shrink-0 ${
+                    active
+                      ? "bg-red-600 text-white"
+                      : "bg-white text-gray-700 hover:bg-gray-100"
+                  }`}
                 >
                   {page}
                 </button>
