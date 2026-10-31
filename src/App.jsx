@@ -5,6 +5,7 @@ import UploadWithName from "./pages/UploadWithName";
 import Gallery from "./pages/Gallery";
 import "./App.css";
 import Visitors from "./pages/Visitors";
+import Admin from "./pages/Admin";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/255141" element={<UploadWithName />} />
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/visitors" element={<Visitors />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </Router>
   );

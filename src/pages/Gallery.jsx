@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ref, listAll, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
+import { storage, database } from "../firebase";
+import { ref as dbRef, get } from "firebase/database";
 import { Link, useSearchParams } from "react-router-dom";
 import Header from "../components/Header";
 
@@ -28,8 +29,6 @@ export default function Gallery() {
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState(null);
 
-  const pageRefs = useRef({});
-
   /* ===============================
      LOAD IDS
   ================================ */
@@ -45,7 +44,22 @@ export default function Gallery() {
         }
 
         const imagesRes = await listAll(imagesFolder);
-        setAllIds(shuffleArray(imagesRes.items.map((i) => i.name)));
+        let ids = imagesRes.items.map((i) => i.name);
+
+        // Load visibility and pin settings
+        try {
+          const snap = await get(dbRef(database, "gallerySettings"));
+          const settings = snap.exists() ? snap.val() : {};
+          ids = ids.filter((id) => settings[id]?.visible !== false);
+          const pinnedIds = ids.filter((id) => settings[id]?.pinned === true);
+          const unpinnedIds = ids.filter((id) => settings[id]?.pinned !== true);
+          const sortedIds = [...pinnedIds, ...shuffleArray(unpinnedIds)];
+          ids = sortedIds;
+        } catch {
+          // If DB fails, show all
+        }
+
+        setAllIds(ids);
       } catch (err) {
         console.error(err);
         setError("Failed to load gallery");
@@ -63,6 +77,8 @@ export default function Gallery() {
     );
   }, []);
 
+  const cachedSettingsRef = useRef({});
+
   /* ===============================
      LOAD PAGE IMAGES
   ================================ */
@@ -73,12 +89,28 @@ export default function Gallery() {
       const start = (currentPage - 1) * PAGE_SIZE;
       const pageIds = allIds.slice(start, start + PAGE_SIZE);
 
-      const data = await Promise.all(
-        pageIds.map(async (id) => ({
+      // Load display names from DB (cached via ref)
+      let settings = cachedSettingsRef.current;
+      if (Object.keys(settings).length === 0) {
+        try {
+          const snap = await get(dbRef(database, "gallerySettings"));
+          settings = snap.exists() ? snap.val() : {};
+          cachedSettingsRef.current = settings;
+        } catch {
+          // ignore
+        }
+      }
+
+      // Load URLs sequentially to avoid overwhelming Firebase
+      const data = [];
+      for (const id of pageIds) {
+        const url = await getDownloadURL(ref(storage, `images/${id}`));
+        data.push({
           id,
-          url: await getDownloadURL(ref(storage, `images/${id}`)),
-        })),
-      );
+          displayName: settings[id]?.displayName || id,
+          url,
+        });
+      }
 
       setImages(data);
     };
@@ -97,21 +129,32 @@ export default function Gallery() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  /* ===============================
-     AUTO SCROLL PAGE BUTTON
-  ================================ */
-  useEffect(() => {
-    const btn = pageRefs.current[currentPage];
-    if (btn) {
-      btn.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest",
-      });
-    }
-  }, [currentPage]);
+  /* Auto scroll removed with new pagination */
 
   const totalPages = Math.ceil(allIds.length / PAGE_SIZE);
+
+  /* Ellipsis pagination logic */
+  const getPaginationItems = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const items = [];
+    items.push(1);
+    if (currentPage > 3) items.push("ellipsis-start");
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (i !== 1 && i !== totalPages) items.push(i);
+    }
+    if (currentPage < totalPages - 2) items.push("ellipsis-end");
+    if (totalPages !== 1) items.push(totalPages);
+    const seen = new Set();
+    return items.filter((x) => {
+      if (seen.has(x)) return false;
+      seen.add(x);
+      return true;
+    });
+  };
+
+  const paginationItems = getPaginationItems();
 
   return (
     <div className="min-h-screen bg-gray-50 pb-[96px]">
@@ -129,6 +172,7 @@ export default function Gallery() {
 
       {!loading && !error && (
         <div className="px-4 mt-6 max-w-[1600px] mx-auto">
+          <p className="text-xs text-gray-400 mb-2">{allIds.length} images</p>
           <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
             {images.map((img) => (
               <div
@@ -147,7 +191,8 @@ export default function Gallery() {
 
                 {/* INFO SECTION */}
                 <div className="p-3 space-y-2">
-                  <p className="text-xs text-gray-600 break-all">{img.id}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate">{img.displayName}</p>
+                  <p className="text-[10px] text-gray-400 break-all font-mono">{img.id}</p>
 
                   <button
                     onClick={() => copyLink(img.id)}
@@ -168,27 +213,59 @@ export default function Gallery() {
 
       {/* PAGINATION */}
       {totalPages > 1 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t">
-          <div className="flex gap-2 px-4 py-3 overflow-x-auto md:justify-center">
-            {Array.from({ length: totalPages }).map((_, i) => {
-              const page = i + 1;
-              const active = page === currentPage;
+        <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
+          <div className="max-w-xl mx-auto flex items-center justify-between gap-2 px-4 py-3">
+            {/* Prev */}
+            <button
+              onClick={() => setSearchParams({ page: Math.max(1, currentPage - 1) })}
+              disabled={currentPage === 1}
+              className="px-3 py-2 rounded-lg text-sm font-medium transition bg-gray-50 hover:bg-gray-100 text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 flex items-center gap-1"
+              aria-label="Previous page"
+            >
+              <span aria-hidden="true">←</span>
+              <span className="hidden sm:inline">Prev</span>
+            </button>
 
-              return (
-                <button
-                  key={page}
-                  ref={(el) => (pageRefs.current[page] = el)}
-                  onClick={() => setSearchParams({ page })}
-                  className={`min-w-[44px] h-[44px] px-4 rounded-lg text-sm font-medium shrink-0 ${
-                    active
-                      ? "bg-red-600 text-white"
-                      : "bg-white text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
+            {/* Page numbers */}
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {paginationItems.map((item, idx) => {
+                if (item === "ellipsis-start" || item === "ellipsis-end") {
+                  return (
+                    <span key={`${item}-${idx}`} className="px-2 text-gray-400 select-none text-sm">
+                      …
+                    </span>
+                  );
+                }
+                const page = item;
+                const active = page === currentPage;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setSearchParams({ page })}
+                    className={`min-w-[36px] h-[36px] px-2 rounded-lg text-sm font-medium transition shrink-0 ${
+                      active
+                        ? "bg-red-600 text-white shadow-md shadow-red-600/20"
+                        : "bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                    }`}
+                    aria-current={active ? "page" : undefined}
+                    aria-label={`Page ${page}`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Next */}
+            <button
+              onClick={() => setSearchParams({ page: Math.min(totalPages, currentPage + 1) })}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 rounded-lg text-sm font-medium transition bg-gray-50 hover:bg-gray-100 text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed shrink-0 flex items-center gap-1"
+              aria-label="Next page"
+            >
+              <span className="hidden sm:inline">Next</span>
+              <span aria-hidden="true">→</span>
+            </button>
           </div>
         </div>
       )}
