@@ -19,7 +19,9 @@ function getSessionId() {
 
 async function fetchIpDetails() {
   try {
-    const res = await fetch("https://ipapi.co/json/");
+    const res = await fetch("https://ipwho.is/", {
+      headers: { Accept: "application/json" },
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {
@@ -64,19 +66,18 @@ export default function LoadImage() {
     const now = Date.now();
     const userRef = dbRef(database, `activeUsers/${sessionId}`);
 
-    let ipData = null;
-
-    // Fetch IP details in the background (non-blocking)
+    // Fetch IP details in the background (non-blocking, CORS-friendly)
     fetchIpDetails().then((details) => {
-      ipData = details;
+      const ip = details?.ip || null;
+      const ipDetails = details || null;
 
       const userData = {
         imageId: id,
         imageUrl,
         startedAt: now,
         sessionId,
-        ip: details?.ip || null,
-        ipDetails: details || null,
+        ip,
+        ipDetails,
       };
 
       // Mark as active. When the tab closes or connection drops, Firebase removes this automatically.
@@ -89,8 +90,8 @@ export default function LoadImage() {
       set(logRef, {
         imageId: id,
         sessionId,
-        ip: details?.ip || null,
-        ipDetails: details || null,
+        ip,
+        ipDetails,
         viewedAt: now,
       });
     });
