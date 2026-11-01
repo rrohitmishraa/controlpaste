@@ -1,11 +1,24 @@
 import { useEffect, useState } from "react";
 import { ref, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase";
+import { ref as dbRef, set, get, onDisconnect, remove } from "firebase/database";
+import { database } from "../firebase";
 import { useParams } from "react-router-dom";
 import Header from "../components/Header";
 
+const SESSION_STORAGE_KEY = "cp_session_id";
+
+function getSessionId() {
+  let id = sessionStorage.getItem(SESSION_STORAGE_KEY);
+  if (!id) {
+    id = "s_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem(SESSION_STORAGE_KEY, id);
+  }
+  return id;
+}
+
 export default function LoadImage() {
   const { id } = useParams();
+  const sessionId = getSessionId();
 
   const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,6 +42,41 @@ export default function LoadImage() {
 
     fetchImage();
   }, [id]);
+
+  /* ===============================
+     TRACK ACTIVE VIEWER
+  ================================ */
+  useEffect(() => {
+    if (!imageUrl) return;
+
+    const now = Date.now();
+    const userRef = dbRef(database, `activeUsers/${sessionId}`);
+
+    const userData = {
+      imageId: id,
+      imageUrl,
+      startedAt: now,
+      sessionId,
+    };
+
+    // Mark as active. When the tab closes or connection drops, Firebase removes this automatically.
+    set(userRef, userData).then(() => {
+      onDisconnect(userRef).remove();
+    });
+
+    // Also log this view to history
+    const logRef = dbRef(database, `viewLogs/${now}/${sessionId}`);
+    set(logRef, {
+      imageId: id,
+      sessionId,
+      viewedAt: now,
+    });
+
+    return () => {
+      // Clean up when component unmounts (navigating away)
+      remove(userRef).catch(() => {});
+    };
+  }, [imageUrl, id, sessionId]);
 
   return (
     <div className="min-h-screen bg-white flex flex-col">

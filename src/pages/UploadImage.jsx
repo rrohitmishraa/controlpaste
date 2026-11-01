@@ -10,6 +10,7 @@ export default function UploadImage() {
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
   const [isDragging, setIsDragging] = useState(false);
+  const [pasted, setPasted] = useState(false);
 
   /* ===============================
      ADD FILES
@@ -31,6 +32,9 @@ export default function UploadImage() {
       setError("Only image files allowed");
       return;
     }
+
+    setPasted(true);
+    setTimeout(() => setPasted(false), 800);
 
     setImages((prev) => [...prev, ...valid]);
     setError("");
@@ -59,6 +63,8 @@ export default function UploadImage() {
 
       if (files.length > 0) {
         e.preventDefault();
+        setPasted(true);
+        setTimeout(() => setPasted(false), 800);
         addFiles(files);
       }
     };
@@ -251,24 +257,75 @@ export default function UploadImage() {
       )}
 
       <div className="max-w-[1000px] mx-auto px-4 mt-6">
-        <div className="text-center text-gray-600 mb-6">
-          Drag & Drop • Paste • Or Select Images
+        {/* Hero */}
+        <div className="text-center py-10">
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight mb-4">
+            Upload & Share <span className="text-blue-600">Images</span>
+          </h1>
+          <p className="text-lg text-gray-500 max-w-xl mx-auto">
+            Drag, drop, or paste images. Get instant links and share with anyone.
+          </p>
         </div>
 
-        <div className="flex justify-center">
-          <input
-            type="file"
-            id="fileInput"
-            hidden
-            multiple
-            onChange={handleFileChange}
-          />
-          <label
-            htmlFor="fileInput"
-            className="px-6 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 cursor-pointer"
-          >
-            Select Images
-          </label>
+        {/* Animated Drag & Drop Zone */}
+        <motion.div
+          animate={{
+            ...(images.length > 0
+              ? { padding: "0.75rem 1.5rem", scale: 1, borderRadius: "1rem" }
+              : { padding: "3rem", scale: 1, borderRadius: "1.5rem" }),
+          }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className={`border-2 border-dashed text-center transition-colors ${
+            pasted
+              ? "border-emerald-400 bg-emerald-50/30 ring-2 ring-emerald-200"
+              : isDragging
+                ? "border-blue-500 bg-blue-50/30"
+                : "border-gray-300 hover:border-blue-400 bg-white"
+          }`}
+        >
+          <div className={`flex items-center justify-center gap-3 ${images.length > 0 ? "flex-row" : "flex-col"}`}>
+            <div className={`${images.length > 0 ? "text-2xl" : "text-6xl mb-4"}`}>📤</div>
+            <div className={`${images.length > 0 ? "text-left" : "text-center"}`}>
+              <h3 className={`${images.length > 0 ? "text-base font-semibold" : "text-xl font-semibold mb-2"} text-gray-800`}>
+                {images.length > 0 ? (pasted ? "Pasted! ✨" : "Add more images") : "Drop your images here"}
+              </h3>
+              {images.length === 0 && (
+                <p className="text-sm text-gray-500 mb-6">
+                  Drag & Drop • Paste • Or Select Images
+                </p>
+              )}
+            </div>
+          </div>
+          <div className={`flex justify-center ${images.length > 0 ? "mt-2" : ""}`}>
+            <input
+              type="file"
+              id="fileInput"
+              hidden
+              multiple
+              onChange={handleFileChange}
+            />
+            <label
+              htmlFor="fileInput"
+              className={`rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-lg shadow-blue-600/20 transition cursor-pointer ${
+                images.length > 0 ? "px-4 py-1.5 text-sm" : "px-8 py-3"
+              }`}
+            >
+              {images.length > 0 ? "+ Add Images" : "Select Images"}
+            </label>
+          </div>
+        </motion.div>
+
+        {/* Feature tags */}
+        <div className="flex justify-center gap-4 mt-8 flex-wrap">
+          {["WebP Conversion", "Animated GIF", "Instant Link", "No Size Limit"].map((tag) => (
+            <span key={tag} className="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 border border-gray-200">
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center text-xs text-gray-400">
+          {images.length > 0 ? `${images.length} image${images.length !== 1 ? "s" : ""} ready` : "No images selected"}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mt-8">

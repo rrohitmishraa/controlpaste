@@ -16,7 +16,6 @@ function App() {
         <Route path="/home" element={<UploadImage />} />
         <Route path="/255141" element={<UploadWithName />} />
         <Route path="/gallery" element={<Gallery />} />
-        <Route path="/visitors" element={<Visitors />} />
         <Route path="/admin" element={<Admin />} />
       </Routes>
     </Router>
