@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ref, getDownloadURL } from "firebase/storage";
+import { storage } from "../firebase";
 import { ref as dbRef, set, get, onDisconnect, remove } from "firebase/database";
 import { database } from "../firebase";
 import { useParams } from "react-router-dom";
@@ -14,6 +15,17 @@ function getSessionId() {
     sessionStorage.setItem(SESSION_STORAGE_KEY, id);
   }
   return id;
+}
+
+async function fetchIpDetails() {
+  try {
+    const res = await fetch("https://ipapi.co/json/");
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.error("Failed to fetch IP details:", err);
+    return null;
+  }
 }
 
 export default function LoadImage() {
@@ -52,24 +64,35 @@ export default function LoadImage() {
     const now = Date.now();
     const userRef = dbRef(database, `activeUsers/${sessionId}`);
 
-    const userData = {
-      imageId: id,
-      imageUrl,
-      startedAt: now,
-      sessionId,
-    };
+    let ipData = null;
 
-    // Mark as active. When the tab closes or connection drops, Firebase removes this automatically.
-    set(userRef, userData).then(() => {
-      onDisconnect(userRef).remove();
-    });
+    // Fetch IP details in the background (non-blocking)
+    fetchIpDetails().then((details) => {
+      ipData = details;
 
-    // Also log this view to history
-    const logRef = dbRef(database, `viewLogs/${now}/${sessionId}`);
-    set(logRef, {
-      imageId: id,
-      sessionId,
-      viewedAt: now,
+      const userData = {
+        imageId: id,
+        imageUrl,
+        startedAt: now,
+        sessionId,
+        ip: details?.ip || null,
+        ipDetails: details || null,
+      };
+
+      // Mark as active. When the tab closes or connection drops, Firebase removes this automatically.
+      set(userRef, userData).then(() => {
+        onDisconnect(userRef).remove();
+      });
+
+      // Also log this view to history
+      const logRef = dbRef(database, `viewLogs/${now}/${sessionId}`);
+      set(logRef, {
+        imageId: id,
+        sessionId,
+        ip: details?.ip || null,
+        ipDetails: details || null,
+        viewedAt: now,
+      });
     });
 
     return () => {

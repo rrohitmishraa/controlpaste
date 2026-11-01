@@ -7,6 +7,7 @@
       "ignore": [
         "node_modules",
         ".git",
+        ".firebase",
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
@@ -15,5 +16,19 @@
         "npm --prefix \"$RESOURCE_DIR\" run lint"
       ]
     }
-  ]
+  ],
+  "hosting": {
+    "public": "build",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ref, listAll, getDownloadURL, deleteObject } from "firebase/storage";
 import { storage, database } from "../firebase";
-import { ref as dbRef, set, get, remove } from "firebase/database";
+import { ref as dbRef, set, get, remove, onValue } from "firebase/database";
 import JSZip from "jszip";
 import { Trash2, Pin, Download, Maximize2 } from "lucide-react";
 import { saveAs } from "file-saver";
@@ -48,8 +48,11 @@ export default function Admin() {
   });
 
   const [showVisitors, setShowVisitors] = useState(false);
+  const [showLiveUsers, setShowLiveUsers] = useState(false);
   const [visitors, setVisitors] = useState([]);
   const [visitorsLoading, setVisitorsLoading] = useState(false);
+  const [liveUsers, setLiveUsers] = useState({});
+  const [liveUsersLoading, setLiveUsersLoading] = useState(false);
   const [fullscreenUrl, setFullscreenUrl] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [ipDetails, setIpDetails] = useState({});
@@ -223,21 +226,53 @@ export default function Admin() {
       setVisitorsLoading(true);
 
       try {
-        const snapshot = await get(dbRef(database, "visitors"));
+        // Load IP-based visitor stats from /visitors (cloud function logVisit).
+        const visitorsSnap = await get(dbRef(database, "visitors"));
 
-        if (!snapshot.exists()) {
-          setVisitors([]);
-          return;
-        }
+        // Load image view logs from /viewLogs (ShowImage page tracking).
+        const viewLogsSnap = await get(dbRef(database, "viewLogs"));
 
-        const data = snapshot.val();
+        const visitorsData = visitorsSnap.exists() ? visitorsSnap.val() : {};
+        const viewLogsData = viewLogsSnap.exists() ? viewLogsSnap.val() : {};
 
-        const formatted = Object.values(data).map((visitor) => ({
-          ip: visitor.ip,
-          firstVisit: visitor.firstVisit,
-          visits: visitor.visits ? Object.values(visitor.visits) : [],
-        }));
+        // Build IP -> visitor info from /visitors.
+        const ipMap = {};
 
+        Object.values(visitorsData).forEach((visitor) => {
+          ipMap[visitor.ip] = {
+            ip: visitor.ip,
+            firstVisit: visitor.firstVisit,
+            visitCount: visitor.visits ? Object.values(visitor.visits).length : 0,
+            imagesViewed: [],
+          };
+        });
+
+        // Merge view logs into IP map.
+        Object.values(viewLogsData).forEach((logEntry) => {
+          Object.values(logEntry).forEach((log) => {
+            const ip = log.ip || log.sessionId || "unknown";
+            if (!ipMap[ip]) {
+              ipMap[ip] = {
+                ip,
+                firstVisit: log.viewedAt,
+                visitCount: 0,
+                imagesViewed: [],
+              };
+            }
+            ipMap[ip].imagesViewed.push({
+              imageId: log.imageId,
+              viewedAt: log.viewedAt,
+              sessionId: log.sessionId,
+            });
+          });
+        });
+
+        // Sort images viewed by newest first.
+        Object.values(ipMap).forEach((v) => {
+          v.imagesViewed.sort((a, b) => b.viewedAt - a.viewedAt);
+        });
+
+        const formatted = Object.values(ipMap);
         formatted.sort((a, b) => b.firstVisit - a.firstVisit);
 
         setVisitors(formatted);
@@ -267,6 +302,28 @@ export default function Admin() {
 
     fetchVisitors();
   }, [showVisitors]);
+
+  /* ============================================================
+     LIVE USERS (who is viewing what right now)
+     ============================================================ */
+
+  useEffect(() => {
+    if (!showLiveUsers) return;
+
+    setLiveUsersLoading(true);
+
+    const activeUsersRef = dbRef(database, "activeUsers");
+
+    const unsubscribe = onValue(activeUsersRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      setLiveUsers(data);
+      setLiveUsersLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [showLiveUsers]);
 
   /* ============================================================
      PERSIST PAGE
@@ -677,6 +734,15 @@ export default function Admin() {
               {showVisitors ? "Back to Gallery" : "View Visitors"}
             </button>
 
+            {!showVisitors && (
+              <button
+                onClick={() => setShowLiveUsers((prev) => !prev)}
+                className="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition"
+              >
+                {showLiveUsers ? "Back to Gallery" : "Live Users"}
+              </button>
+            )}
+
             {deleting && (
               <span className="text-xs text-red-600 font-medium px-2 py-2">
                 Deleting...
@@ -726,16 +792,16 @@ export default function Admin() {
                       </h3>
 
                       <span className="text-sm text-gray-500">
-                        Total Visits: {visitor.visits.length}
+                        Total Visits: {visitor.visitCount || visitor.visits.length}
                       </span>
                     </div>
 
                     <p className="text-sm text-gray-600 mt-1">
                       Latest Visit:{" "}
                       <span className="font-medium text-gray-800">
-                        {visitor.visits.length > 0 ?
-                          formatDate(Math.max(...visitor.visits))
-                        : formatDate(visitor.firstVisit)}
+                        {visitor.visits && visitor.visits.length > 0
+                          ? formatDate(Math.max(...visitor.visits))
+                          : formatDate(visitor.firstVisit)}
                       </span>
                     </p>
 
@@ -744,7 +810,7 @@ export default function Admin() {
                         await navigator.clipboard.writeText(visitor.ip);
                         alert("IP copied");
                       }}
-                      className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg mt-2"
+                      className="px-4 py-2 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg mt-2 w-fit"
                     >
                       Copy IP
                     </button>
@@ -754,7 +820,7 @@ export default function Admin() {
                         IP Details
                       </p>
 
-                      {ipDetails[visitor.ip] ?
+                      {ipDetails[visitor.ip] ? (
                         <>
                           <p>
                             Country:{" "}
@@ -767,7 +833,33 @@ export default function Admin() {
                             Timezone: {ipDetails[visitor.ip].timezone || "N/A"}
                           </p>
                         </>
-                      : <p className="text-gray-400">Loading details...</p>}
+                      ) : <p className="text-gray-400">Loading details...</p>}
+                    </div>
+
+                    <div className="mt-4 bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+                      <p className="font-semibold text-gray-800 mb-1">
+                        Images Viewed ({visitor.imagesViewed?.length || 0})
+                      </p>
+
+                      {visitor.imagesViewed && visitor.imagesViewed.length > 0 ? (
+                        <div className="max-h-24 overflow-y-auto space-y-1">
+                          {visitor.imagesViewed.map((view, i) => (
+                            <div
+                              key={i}
+                              className="flex justify-between border-b border-gray-100 py-1 last:border-b-0"
+                            >
+                              <span className="text-gray-500 text-xs truncate">
+                                Image {view.imageId}
+                              </span>
+                              <span className="text-gray-700 text-xs">
+                                {formatDate(view.viewedAt)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 text-xs">No image views recorded.</p>
+                      )}
                     </div>
 
                     <div className="mt-4 bg-gray-50 rounded-lg p-3 text-xs space-y-1">
@@ -775,16 +867,21 @@ export default function Admin() {
                         Visit Log
                       </p>
 
-                      <div className="max-h-24 overflow-y-auto">
-                        {visitor.visits.map((visit, i) => (
+                      <div className="max-h-24 overflow-y-auto space-y-0">
+                        {(visitor.visits && visitor.visits.length > 0
+                          ? visitor.visits
+                          : visitor.imagesViewed.map((v) => v.viewedAt)
+                        ).map((v, i) => (
                           <div
                             key={i}
                             className="flex justify-between border-b border-gray-100 py-1 last:border-b-0"
                           >
-                            <span className="text-gray-500">Visit {i + 1}</span>
+                            <span className="text-gray-500 text-xs">
+                              Visit {i + 1}
+                            </span>
 
-                            <span className="text-gray-700">
-                              {formatDate(visit)}
+                            <span className="text-gray-700 text-xs">
+                              {formatDate(v)}
                             </span>
                           </div>
                         ))}
@@ -795,6 +892,71 @@ export default function Admin() {
               </div>
             }
           </div>
+        : showLiveUsers ?
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold">Live Users</h2>
+              <p className="text-gray-600 text-sm">
+                Users currently viewing images (auto-updates when they leave)
+              </p>
+              {liveUsersLoading ? (
+                <p className="text-center py-4 text-gray-500">Loading live users…</p>
+              ) : Object.keys(liveUsers).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-gray-500 text-sm">No one is viewing images right now.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {Object.entries(liveUsers).map(([sessionId, user]) => (
+                    <div key={sessionId} className="bg-white p-6 rounded-xl border shadow-sm">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">
+                            Session {sessionId.slice(-6)}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Viewing image:{" "}
+                            <span className="font-mono text-xs">{user.imageId}</span>
+                          </p>
+                          {user.ip && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              IP:{" "}
+                              <span className="font-mono text-xs">{user.ip}</span>
+                            </p>
+                          )}
+                        </div>
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                      </div>
+                      <div className="mt-4 bg-gray-50 rounded-lg p-3 text-xs space-y-1">
+                        <p className="font-semibold text-gray-800 mb-1">
+                          View Details
+                        </p>
+                        <p>
+                          Started: <span className="text-gray-600">{formatDate(user.startedAt)}</span>
+                        </p>
+                        <p>
+                          Duration:{" "}
+                          <span className="text-gray-600">
+                            {Math.round((Date.now() - user.startedAt) / 1000)}s ago
+                          </span>
+                        </p>
+                        {user.ipDetails && (
+                          <>
+                            <p className="font-semibold text-gray-800 mb-1 mt-2">
+                              IP Location
+                            </p>
+                            <p>Country: {user.ipDetails.country_name || "N/A"}</p>
+                            <p>City: {user.ipDetails.city || "N/A"}</p>
+                            <p>Region: {user.ipDetails.region || "N/A"}</p>
+                            <p>ISP: {user.ipDetails.org || "N/A"}</p>
+                            <p>Timezone: {user.ipDetails.timezone || "N/A"}</p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
         : loading ?
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
