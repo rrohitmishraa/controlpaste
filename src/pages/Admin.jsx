@@ -138,6 +138,8 @@ export default function Admin() {
      LIVE USERS
      ============================================================ */
 
+  const LIVE_USER_TIMEOUT = 60 * 1000;
+
   const [showLiveUsers, setShowLiveUsers] = useState(false);
   const [liveUsers, setLiveUsers] = useState({});
   const [liveUsersLoading, setLiveUsersLoading] = useState(false);
@@ -555,8 +557,8 @@ export default function Admin() {
   }, [showVisitors, loggedIn]);
 
   /* ============================================================
-     LIVE USERS
-     ============================================================ */
+   LIVE USERS
+   ============================================================ */
 
   useEffect(() => {
     if (!showLiveUsers || !loggedIn) return;
@@ -565,20 +567,57 @@ export default function Admin() {
 
     const activeUsersRef = dbRef(database, "activeUsers");
 
-    const unsubscribe = onValue(
-      activeUsersRef,
-      (snapshot) => {
-        setLiveUsers(snapshot.val() || {});
-        setLiveUsersLoading(false);
-      },
-      (err) => {
-        console.error("Failed to load live users:", err);
+    const updateLiveUsers = (snapshot) => {
+      const users = snapshot.val() || {};
+      const now = Date.now();
 
-        setLiveUsersLoading(false);
-      },
-    );
+      /*
+       * Only keep users who have been active recently.
+       *
+       * The website should update lastActive regularly.
+       * Entries older than LIVE_USER_TIMEOUT are treated
+       * as inactive and are not shown in the admin dashboard.
+       */
+      const activeUsers = Object.fromEntries(
+        Object.entries(users).filter(([_, user]) => {
+          if (!user) return false;
 
-    return () => unsubscribe();
+          const lastActive =
+            user.lastActive || user.updatedAt || user.startedAt || 0;
+
+          return now - lastActive <= LIVE_USER_TIMEOUT;
+        }),
+      );
+
+      setLiveUsers(activeUsers);
+      setLiveUsersLoading(false);
+    };
+
+    const unsubscribe = onValue(activeUsersRef, updateLiveUsers, (err) => {
+      console.error("Failed to load live users:", err);
+
+      setLiveUsersLoading(false);
+    });
+
+    /*
+     * Re-check activity periodically.
+     *
+     * Firebase only triggers on database changes, but a user can
+     * become inactive simply because their lastActive timestamp
+     * gets too old.
+     */
+    const interval = setInterval(() => {
+      get(activeUsersRef)
+        .then(updateLiveUsers)
+        .catch((err) => {
+          console.error("Failed to refresh live users:", err);
+        });
+    }, 15000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [showLiveUsers, loggedIn]);
 
   /* ============================================================
@@ -1460,15 +1499,15 @@ export default function Admin() {
           </section>
         : showLiveUsers ?
           /* ====================================================
-              LIVE USERS
-             ==================================================== */
+      LIVE USERS
+     ==================================================== */
 
           <section>
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Live Users</h2>
 
               <p className="text-sm text-gray-500 mt-1">
-                Users currently viewing images.
+                Users currently active on the site.
               </p>
             </div>
 
@@ -1481,50 +1520,191 @@ export default function Admin() {
                 <Radio size={32} className="mx-auto text-gray-300 mb-3" />
 
                 <p className="text-gray-500">
-                  No one is viewing images right now.
+                  No one is currently active on the site.
                 </p>
               </div>
             : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                {Object.entries(liveUsers).map(([sessionId, user]) => (
-                  <div
-                    key={sessionId}
-                    className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">
-                          Session {sessionId.slice(-6)}
-                        </h3>
+                {Object.entries(liveUsers).map(([sessionId, user]) => {
+                  const details =
+                    user.ipDetails || user.ipInfo || user.location || {};
 
-                        <p className="text-sm text-gray-500 mt-2">
-                          Viewing{" "}
-                          <span className="font-mono text-xs text-gray-700">
-                            {user.imageId}
+                  const city = user.city || getDetailValue(details, "city");
+
+                  const region =
+                    user.region ||
+                    user.regionName ||
+                    getDetailValue(details, "region", "regionName");
+
+                  const country =
+                    user.country ||
+                    user.countryName ||
+                    getDetailValue(
+                      details,
+                      "country",
+                      "country_name",
+                      "countryName",
+                    );
+
+                  const postal =
+                    user.postal ||
+                    user.zip ||
+                    getDetailValue(details, "postal", "zip");
+
+                  const latitude =
+                    user.latitude ||
+                    user.lat ||
+                    getDetailValue(details, "latitude", "lat");
+
+                  const longitude =
+                    user.longitude ||
+                    user.lon ||
+                    user.lng ||
+                    getDetailValue(details, "longitude", "lon", "lng");
+
+                  const isp =
+                    user.isp ||
+                    user.org ||
+                    user.organization ||
+                    getDetailValue(details, "isp", "org", "organization");
+
+                  const userAgent =
+                    user.userAgent ||
+                    getDetailValue(details, "userAgent", "user_agent");
+
+                  const lastActive =
+                    user.lastActive || user.updatedAt || user.startedAt;
+
+                  return (
+                    <div
+                      key={sessionId}
+                      className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm"
+                    >
+                      {/* HEADER */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Radio
+                              size={17}
+                              className="text-green-600 shrink-0"
+                            />
+
+                            <h3 className="font-semibold text-gray-900">
+                              Active User
+                            </h3>
+                          </div>
+
+                          {user.imageId && (
+                            <p className="text-sm text-gray-500 mt-2">
+                              Currently viewing{" "}
+                              <span className="font-mono text-xs text-gray-700 break-all">
+                                {dbSettings[user.imageId]?.displayName ||
+                                  user.imageId}
+                              </span>
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+
+                          <span className="text-xs font-medium text-green-700">
+                            Live
                           </span>
-                        </p>
+                        </div>
                       </div>
 
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                      {/* IP DETAILS */}
+                      <div className="mt-5 bg-green-50 border border-green-100 rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <MapPin size={16} className="text-green-600" />
+
+                          <h4 className="text-sm font-semibold text-gray-800">
+                            Connection Details
+                          </h4>
+                        </div>
+
+                        <div className="space-y-2 text-sm">
+                          {user.ip && (
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                              <span className="text-gray-500">IP Address</span>
+
+                              <span className="font-mono text-xs text-gray-900 break-all">
+                                {user.ip}
+                              </span>
+                            </div>
+                          )}
+
+                          {(city || region || country) && (
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                              <span className="text-gray-500">Location</span>
+
+                              <span className="text-gray-800 text-right">
+                                {[city, region, country]
+                                  .filter(Boolean)
+                                  .join(", ")}
+                              </span>
+                            </div>
+                          )}
+
+                          {postal && (
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                              <span className="text-gray-500">Postal Code</span>
+
+                              <span className="text-gray-800">{postal}</span>
+                            </div>
+                          )}
+
+                          {(latitude || longitude) && (
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                              <span className="text-gray-500">Coordinates</span>
+
+                              <span className="font-mono text-xs text-gray-800">
+                                {latitude || "?"}, {longitude || "?"}
+                              </span>
+                            </div>
+                          )}
+
+                          {isp && (
+                            <div className="flex flex-col sm:flex-row sm:justify-between gap-1">
+                              <span className="text-gray-500">
+                                Network / ISP
+                              </span>
+
+                              <span className="text-gray-800 text-right break-all">
+                                {isp}
+                              </span>
+                            </div>
+                          )}
+
+                          {userAgent && (
+                            <div className="pt-2 mt-2 border-t border-green-100">
+                              <p className="text-xs text-gray-500 mb-1">
+                                User Agent
+                              </p>
+
+                              <p className="font-mono text-[11px] leading-relaxed text-gray-700 break-all">
+                                {userAgent}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* LIVE STATUS */}
+                      <div className="mt-4 bg-gray-50 rounded-xl p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm text-gray-600">
+                            Last activity
+                          </span>
+
+                          <span className="text-sm font-medium text-gray-900">
+                            {formatDuration(lastActive)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-
-                    <div className="mt-5 bg-gray-50 rounded-xl p-4 text-sm space-y-2">
-                      {user.ip && (
-                        <p className="text-gray-600">
-                          IP:{" "}
-                          <span className="font-mono text-xs">{user.ip}</span>
-                        </p>
-                      )}
-
-                      <p className="text-gray-600">
-                        Started: {formatDate(user.startedAt)}
-                      </p>
-
-                      <p className="text-gray-600">
-                        Active: {formatDuration(user.startedAt)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             }
           </section>
